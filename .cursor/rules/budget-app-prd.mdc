@@ -1,0 +1,157 @@
+---
+alwaysApply: true
+---
+
+# Product Requirements Document (PRD)
+## Project: Personal Budget App (Expo + React Native)
+
+### 1. Overview
+The Personal Budget App is a mobile application built using **React Native with Expo** for personal financial management. The app allows users to track income and expenses, set financial goals, categorize transactions, and view insights through reports and visualizations. The initial release focuses on local-first functionality with a clean, smooth, and secure user experience. Cloud sync and backend storage will be introduced in later versions.
+
+---
+
+### 2. Goals & Objectives
+- Provide an intuitive way to track personal finances
+- Offer meaningful insights through reports and charts
+- Ensure data privacy and security
+- Deliver a fast, smooth, and visually appealing UI
+- Support offline-first usage with future-ready sync architecture
+
+---
+
+### 3. Target Users
+- Individuals managing personal budgets
+- Users who want simple, private, and offline-capable finance tracking
+- Users planning financial goals (savings, debt payoff, etc.)
+
+---
+
+### 4. Key Features (Initial Release)
+
+#### 4.1 Track Income & Expenses
+- Add, edit, delete income and expense transactions
+- Fields:
+  - Amount
+  - Date
+  - Category
+  - Notes (optional)
+  - Type (Income / Expense)
+- Support recurring transactions (basic: monthly)
+
+#### 4.2 Categorize Transactions
+- Default categories (Food, Rent, Utilities, Transport, Entertainment, Savings, etc.)
+- Custom category creation
+- Category-based summaries
+
+#### 4.3 Financial Goals
+- Create financial goals (e.g., Save $5,000)
+- Define:
+  - Goal name
+  - Target amount
+  - Deadline (optional)
+- Progress tracking based on linked transactions
+
+#### 4.4 Reports & Analytics
+- Time-based reports:
+  - Daily
+  - Monthly
+  - Yearly
+- Graphical views:
+  - Pie charts (category breakdown)
+  - Bar charts (monthly income vs expenses)
+  - Line charts (spending trends)
+- Summary metrics:
+  - Total income
+  - Total expenses
+  - Net balance
+
+#### 4.5 Data Security
+- Local data storage with encryption
+- Optional app-level authentication:
+  - PIN / Biometric (Face ID / Fingerprint)
+- No data shared externally in initial release
+
+#### 4.6 Reset All Settings
+- Clear all transactions, goals, and categories
+- Reset app to initial state
+- Confirmation required before reset
+
+#### 4.7 Local Storage & Sync Readiness
+- Store all data locally on device
+- Recommended storage:
+  - SQLite / MMKV / Expo SecureStore (as applicable)
+- Architecture designed for future:
+  - Account-based sync
+  - Cloud database integration (e.g., Firebase, Supabase)
+
+#### 4.8 UI / UX
+- Smooth animations and transitions
+- Modern, minimal, and clean design
+- Light & Dark mode support
+- Responsive layouts for different screen sizes
+- Accessibility considerations (font scaling, contrast)
+
+---
+
+### 5. Non-Functional Requirements
+
+#### 5.1 Performance
+- App launch time < 2 seconds
+- Smooth scrolling and animations (60 FPS)
+
+#### 5.2 Security
+- Encrypted local storage
+- Secure handling of sensitive financial data
+
+#### 5.3 Reliability
+- Offline-first behavior
+- No data loss on app restarts
+
+#### 5.4 Scalability
+- Modular architecture
+- Easily extendable for:
+  - Cloud sync
+  - Multi-device login
+  - Exporting data
+
+---
+
+### 6. Technical Stack (Initial)
+
+- **Frontend:** React Native (Expo)
+- **State Management:** Context API / Zustand / Redux Toolkit
+- **Navigation:** Expo Router or React Navigation
+- **Charts:** Victory Native / Recharts / React Native SVG Charts
+- **Storage:** SQLite / MMKV / SecureStore
+- **Animations:** Reanimated + Gesture Handler
+
+---
+
+### 7. Future Enhancements (Out of Scope for Initial Release)
+- Cloud sync & multi-device support
+- Data export (CSV / PDF)
+- Budget limits & alerts
+- AI-powered spending insights
+- Multi-currency support
+
+---
+
+### 8. Success Metrics
+- Daily active usage
+- Number of transactions logged per user
+- Goal completion rate
+- App stability (crash-free sessions)
+
+---
+
+### 9. Assumptions & Constraints
+- Initial version is single-user, local-only
+- No backend dependency for v1
+- App is for personal (non-enterprise) use
+
+---
+
+### 10. Open Questions
+- Preferred charting library?
+- Authentication required in v1 or optional?
+- Platform priority: iOS-first or Android-first?
