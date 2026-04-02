@@ -83,21 +83,25 @@ export default function GoalsScreen() {
       return;
     }
 
-    addGoal({
-      name: name.trim(),
-      targetAmount: amount,
-      currentAmount: saved,
-      deadline: targetDate || undefined,
-      color: selectedColor,
-    });
-    
-    // Reset form
-    setName('');
-    setTargetAmount('10000');
-    setAlreadySaved('0');
-    setTargetDate('');
-    setSelectedColor(GOAL_COLORS[0]);
-    setShowModal(false);
+    void (async () => {
+      try {
+        await addGoal({
+          name: name.trim(),
+          targetAmount: amount,
+          currentAmount: saved,
+          deadline: targetDate || undefined,
+          color: selectedColor,
+        });
+        setName('');
+        setTargetAmount('10000');
+        setAlreadySaved('0');
+        setTargetDate('');
+        setSelectedColor(GOAL_COLORS[0]);
+        setShowModal(false);
+      } catch {
+        Alert.alert('Could not create goal', 'Check your connection and Supabase configuration.');
+      }
+    })();
   };
 
   const handleCancel = () => {

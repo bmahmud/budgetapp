@@ -33,10 +33,14 @@ export default function TransactionDetailScreen() {
     }
   }, [id, transactions]);
 
-  const handleUpdate = (data: Parameters<typeof updateTransaction>[1]) => {
+  const handleUpdate = async (data: Parameters<typeof updateTransaction>[1]) => {
     if (!id) return;
-    updateTransaction(id, data);
-    router.back();
+    try {
+      await updateTransaction(id, data);
+      router.back();
+    } catch {
+      Alert.alert('Could not save', 'Check your connection and Supabase configuration.');
+    }
   };
 
   const handleDelete = () => {
@@ -46,9 +50,13 @@ export default function TransactionDetailScreen() {
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: () => {
-          deleteTransaction(id);
-          router.back();
+        onPress: async () => {
+          try {
+            await deleteTransaction(id);
+            router.back();
+          } catch {
+            Alert.alert('Could not delete', 'Check your connection and Supabase configuration.');
+          }
         },
       },
     ]);

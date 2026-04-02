@@ -1,48 +1,38 @@
 import { Category, CategorySummary, Goal, SummaryMetrics, Transaction } from '@/types';
+import * as remote from '@/lib/budget-remote';
+import { supabase } from '@/lib/supabase';
 import { differenceInDays, endOfMonth, endOfYear, format, startOfMonth, startOfYear } from 'date-fns';
 import { create } from 'zustand';
 
-// Default categories
-const DEFAULT_CATEGORIES: Category[] = [
-  // Income categories
-  { id: 'cat_salary', name: 'Salary', icon: 'briefcase.fill', color: '#4CAF50', isDefault: true, createdAt: new Date().toISOString() },
-  { id: 'cat_freelance', name: 'Freelance', icon: 'laptopcomputer', color: '#2196F3', isDefault: true, createdAt: new Date().toISOString() },
-  { id: 'cat_investment', name: 'Investment', icon: 'chart.line.uptrend.xyaxis', color: '#9C27B0', isDefault: true, createdAt: new Date().toISOString() },
-  { id: 'cat_other_income', name: 'Other Income', icon: 'plus.circle.fill', color: '#00BCD4', isDefault: true, createdAt: new Date().toISOString() },
-  
-  // Expense categories
-  { id: 'cat_food', name: 'Food & Dining', icon: 'fork.knife', color: '#FF9800', isDefault: true, createdAt: new Date().toISOString() },
-  { id: 'cat_rent', name: 'Bills & Utilities', icon: 'house.fill', color: '#F44336', isDefault: true, createdAt: new Date().toISOString() },
-  { id: 'cat_transport', name: 'Transportation', icon: 'car.fill', color: '#3F51B5', isDefault: true, createdAt: new Date().toISOString() },
-  { id: 'cat_entertainment', name: 'Entertainment', icon: 'tv.fill', color: '#E91E63', isDefault: true, createdAt: new Date().toISOString() },
-  { id: 'cat_shopping', name: 'Shopping', icon: 'bag.fill', color: '#E91E63', isDefault: true, createdAt: new Date().toISOString() },
-  { id: 'cat_healthcare', name: 'Healthcare', icon: 'cross.case.fill', color: '#00BCD4', isDefault: true, createdAt: new Date().toISOString() },
-  { id: 'cat_education', name: 'Education', icon: 'book.fill', color: '#673AB7', isDefault: true, createdAt: new Date().toISOString() },
-  { id: 'cat_savings', name: 'Savings', icon: 'banknote.fill', color: '#4CAF50', isDefault: true, createdAt: new Date().toISOString() },
-  { id: 'cat_other_expense', name: 'Other Expense', icon: 'minus.circle.fill', color: '#607D8B', isDefault: true, createdAt: new Date().toISOString() },
-];
+async function getUserId(): Promise<string | null> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user?.id ?? null;
+}
 
 interface BudgetStore {
-  // State (in-memory only, session-based)
   transactions: Transaction[];
   categories: Category[];
   goals: Goal[];
   isLoading: boolean;
   isInitialized: boolean;
 
-  // Actions
+  hydrateFromRemote: () => Promise<void>;
+  resetLocalState: () => void;
+  /** @deprecated Hydration runs after sign-in; kept for existing screen effects. */
   initialize: () => void;
-  addTransaction: (transaction: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>) => void;
-  updateTransaction: (id: string, transaction: Partial<Transaction>) => void;
-  deleteTransaction: (id: string) => void;
-  addCategory: (category: Omit<Category, 'id' | 'createdAt'>) => void;
-  deleteCategory: (id: string) => void;
-  addGoal: (goal: Omit<Goal, 'id' | 'createdAt' | 'updatedAt'>) => void;
-  updateGoal: (id: string, goal: Partial<Goal>) => void;
-  deleteGoal: (id: string) => void;
-  resetAllData: () => void;
 
-  // Computed
+  addTransaction: (transaction: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateTransaction: (id: string, transaction: Partial<Transaction>) => Promise<void>;
+  deleteTransaction: (id: string) => Promise<void>;
+  addCategory: (category: Omit<Category, 'id' | 'createdAt'>) => Promise<void>;
+  deleteCategory: (id: string) => Promise<void>;
+  addGoal: (goal: Omit<Goal, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateGoal: (id: string, goal: Partial<Goal>) => Promise<void>;
+  deleteGoal: (id: string) => Promise<void>;
+  resetAllData: () => Promise<void>;
+
   getSummaryMetrics: (period?: 'month' | 'year' | 'all') => SummaryMetrics;
   getCategorySummaries: (period?: 'month' | 'year' | 'all', type?: 'income' | 'expense') => CategorySummary[];
   getTransactionsByDateRange: (startDate: string, endDate: string) => Transaction[];
@@ -52,17 +42,43 @@ interface BudgetStore {
 
 export const useBudgetStore = create<BudgetStore>((set, get) => ({
   transactions: [],
-  categories: [...DEFAULT_CATEGORIES],
+  categories: [],
   goals: [],
   isLoading: false,
   isInitialized: false,
 
-  initialize: () => {
-    set({ isInitialized: true, isLoading: false });
+  resetLocalState: () => {
+    set({
+      transactions: [],
+      categories: [],
+      goals: [],
+      isInitialized: false,
+      isLoading: false,
+    });
   },
 
-  addTransaction: (transaction) => {
-    const id = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  initialize: () => {},
+
+  hydrateFromRemote: async () => {
+    const uid = await getUserId();
+    if (!uid) {
+      get().resetLocalState();
+      return;
+    }
+    set({ isLoading: true });
+    try {
+      const { categories, transactions, goals } = await remote.fetchAllForUser(uid);
+      set({ categories, transactions, goals, isInitialized: true, isLoading: false });
+    } catch (e) {
+      console.error('hydrateFromRemote failed', e);
+      set({ isLoading: false, isInitialized: true });
+    }
+  },
+
+  addTransaction: async (transaction) => {
+    const uid = await getUserId();
+    if (!uid) return;
+    const id = remote.randomId();
     const now = new Date().toISOString();
     const newTransaction: Transaction = {
       ...transaction,
@@ -70,45 +86,82 @@ export const useBudgetStore = create<BudgetStore>((set, get) => ({
       createdAt: now,
       updatedAt: now,
     };
-    set((state) => ({
-      transactions: [newTransaction, ...state.transactions],
-    }));
+    set((state) => ({ transactions: [newTransaction, ...state.transactions] }));
+    try {
+      await remote.insertTransactionRemote(uid, newTransaction);
+    } catch (e) {
+      set((state) => ({ transactions: state.transactions.filter((t) => t.id !== id) }));
+      throw e;
+    }
   },
 
-  updateTransaction: (id, transaction) => {
+  updateTransaction: async (id, transaction) => {
+    const prev = get().transactions.find((t) => t.id === id);
+    if (!prev) return;
+    const updated: Transaction = {
+      ...prev,
+      ...transaction,
+      updatedAt: new Date().toISOString(),
+    };
     set((state) => ({
-      transactions: state.transactions.map((t) =>
-        t.id === id ? { ...t, ...transaction, updatedAt: new Date().toISOString() } : t
-      ),
+      transactions: state.transactions.map((t) => (t.id === id ? updated : t)),
     }));
+    try {
+      await remote.updateTransactionRemote(updated);
+    } catch (e) {
+      set((state) => ({
+        transactions: state.transactions.map((t) => (t.id === id ? prev : t)),
+      }));
+      throw e;
+    }
   },
 
-  deleteTransaction: (id) => {
-    set((state) => ({
-      transactions: state.transactions.filter((t) => t.id !== id),
-    }));
+  deleteTransaction: async (id) => {
+    const prev = get().transactions;
+    set((state) => ({ transactions: state.transactions.filter((t) => t.id !== id) }));
+    try {
+      await remote.deleteTransactionRemote(id);
+    } catch (e) {
+      set({ transactions: prev });
+      throw e;
+    }
   },
 
-  addCategory: (category) => {
-    const id = `cat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  addCategory: async (category) => {
+    const uid = await getUserId();
+    if (!uid) return;
+    const id = remote.randomId();
     const newCategory: Category = {
       ...category,
       id,
       createdAt: new Date().toISOString(),
     };
-    set((state) => ({
-      categories: [...state.categories, newCategory],
-    }));
+    set((state) => ({ categories: [...state.categories, newCategory] }));
+    try {
+      await remote.insertCategoryRemote(uid, newCategory);
+    } catch (e) {
+      set((state) => ({ categories: state.categories.filter((c) => c.id !== id) }));
+      throw e;
+    }
   },
 
-  deleteCategory: (id) => {
-    set((state) => ({
-      categories: state.categories.filter((c) => c.id !== id && c.isDefault),
-    }));
+  deleteCategory: async (id) => {
+    const cat = get().categories.find((c) => c.id === id);
+    if (!cat || cat.isDefault) return;
+    const prev = get().categories;
+    set((state) => ({ categories: state.categories.filter((c) => c.id !== id) }));
+    try {
+      await remote.deleteCategoryRemote(id);
+    } catch (e) {
+      set({ categories: prev });
+      throw e;
+    }
   },
 
-  addGoal: (goal) => {
-    const id = `goal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  addGoal: async (goal) => {
+    const uid = await getUserId();
+    if (!uid) return;
+    const id = remote.randomId();
     const now = new Date().toISOString();
     const newGoal: Goal = {
       ...goal,
@@ -117,31 +170,58 @@ export const useBudgetStore = create<BudgetStore>((set, get) => ({
       createdAt: now,
       updatedAt: now,
     };
-    set((state) => ({
-      goals: [...state.goals, newGoal],
-    }));
+    set((state) => ({ goals: [...state.goals, newGoal] }));
+    try {
+      await remote.insertGoalRemote(uid, newGoal);
+    } catch (e) {
+      set((state) => ({ goals: state.goals.filter((g) => g.id !== id) }));
+      throw e;
+    }
   },
 
-  updateGoal: (id, goal) => {
+  updateGoal: async (id, goal) => {
+    const prev = get().goals.find((g) => g.id === id);
+    if (!prev) return;
+    const updated: Goal = {
+      ...prev,
+      ...goal,
+      updatedAt: new Date().toISOString(),
+    };
     set((state) => ({
-      goals: state.goals.map((g) =>
-        g.id === id ? { ...g, ...goal, updatedAt: new Date().toISOString() } : g
-      ),
+      goals: state.goals.map((g) => (g.id === id ? updated : g)),
     }));
+    try {
+      await remote.updateGoalRemote(updated);
+    } catch (e) {
+      set((state) => ({
+        goals: state.goals.map((g) => (g.id === id ? prev : g)),
+      }));
+      throw e;
+    }
   },
 
-  deleteGoal: (id) => {
-    set((state) => ({
-      goals: state.goals.filter((g) => g.id !== id),
-    }));
+  deleteGoal: async (id) => {
+    const prev = get().goals;
+    set((state) => ({ goals: state.goals.filter((g) => g.id !== id) }));
+    try {
+      await remote.deleteGoalRemote(id);
+    } catch (e) {
+      set({ goals: prev });
+      throw e;
+    }
   },
 
-  resetAllData: () => {
-    set({
-      transactions: [],
-      goals: [],
-      categories: [...DEFAULT_CATEGORIES],
-    });
+  resetAllData: async () => {
+    const uid = await getUserId();
+    if (!uid) return;
+    set({ isLoading: true });
+    try {
+      const categories = await remote.deleteAllUserData(uid);
+      set({ transactions: [], goals: [], categories, isLoading: false });
+    } catch (e) {
+      set({ isLoading: false });
+      throw e;
+    }
   },
 
   getSummaryMetrics: (period = 'month') => {
@@ -159,7 +239,6 @@ export const useBudgetStore = create<BudgetStore>((set, get) => ({
       const end = format(endOfYear(now), 'yyyy-MM-dd');
       filtered = transactions.filter((t) => t.date >= start && t.date <= end);
     } else if (period === 'all') {
-      // Use all transactions
       filtered = transactions;
     }
 
@@ -185,7 +264,6 @@ export const useBudgetStore = create<BudgetStore>((set, get) => ({
       const end = format(endOfYear(now), 'yyyy-MM-dd');
       filtered = transactions.filter((t) => t.date >= start && t.date <= end);
     } else if (period === 'all') {
-      // Use all transactions
       filtered = transactions;
     }
 
@@ -231,7 +309,6 @@ export const useBudgetStore = create<BudgetStore>((set, get) => ({
     if (!deadline) return null;
     const deadlineDate = new Date(deadline);
     const today = new Date();
-    const days = differenceInDays(deadlineDate, today);
-    return days;
+    return differenceInDays(deadlineDate, today);
   },
 }));

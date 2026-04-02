@@ -30,7 +30,7 @@ export default function GoalsScreen() {
     }
   }, [isInitialized, initialize]);
 
-  const handleAddGoal = () => {
+  const handleAddGoal = async () => {
     const amount = parseFloat(targetAmount);
     if (!name.trim()) {
       Alert.alert('Error', 'Please enter a goal name');
@@ -41,16 +41,20 @@ export default function GoalsScreen() {
       return;
     }
 
-    addGoal({
-      name: name.trim(),
-      targetAmount: amount,
-      currentAmount: 0,
-      deadline: deadline || undefined,
-    });
-    setName('');
-    setTargetAmount('');
-    setDeadline('');
-    setShowForm(false);
+    try {
+      await addGoal({
+        name: name.trim(),
+        targetAmount: amount,
+        currentAmount: 0,
+        deadline: deadline || undefined,
+      });
+      setName('');
+      setTargetAmount('');
+      setDeadline('');
+      setShowForm(false);
+    } catch {
+      Alert.alert('Could not create goal', 'Check your connection and Supabase configuration.');
+    }
   };
 
   const renderGoal = ({ item }: { item: Goal }) => (

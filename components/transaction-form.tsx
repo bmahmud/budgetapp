@@ -12,7 +12,7 @@ import { Colors } from '@/constants/theme';
 interface TransactionFormProps {
   categories: Category[];
   initialData?: Partial<Transaction>;
-  onSubmit: (data: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  onSubmit: (data: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>) => void | Promise<void>;
   onCancel: () => void;
 }
 
@@ -37,7 +37,7 @@ export function TransactionForm({ categories, initialData, onSubmit, onCancel }:
     return true; // Show all for now
   });
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const amountNum = parseFloat(amount);
     if (isNaN(amountNum) || amountNum <= 0) {
       Alert.alert('Error', 'Please enter a valid amount');
@@ -55,7 +55,7 @@ export function TransactionForm({ categories, initialData, onSubmit, onCancel }:
       return;
     }
 
-    onSubmit({
+    await onSubmit({
       amount: amountNum,
       date,
       categoryId,

@@ -5,10 +5,12 @@ import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/contexts/auth-context';
 import { useBudgetStore } from '@/store/budget-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function SettingsScreen() {
+  const { session, signOut } = useAuth();
   const { isInitialized, initialize, resetAllData } = useBudgetStore();
   const colorScheme = useColorScheme() ?? 'light';
   const theme = Colors[colorScheme];
@@ -29,8 +31,14 @@ export default function SettingsScreen() {
           text: 'Reset',
           style: 'destructive',
           onPress: () => {
-            resetAllData();
-            Alert.alert('Success', 'All data has been reset.');
+            void (async () => {
+              try {
+                await resetAllData();
+                Alert.alert('Success', 'All data has been reset.');
+              } catch {
+                Alert.alert('Could not reset', 'Check your connection and Supabase configuration.');
+              }
+            })();
           },
         },
       ]
@@ -44,6 +52,26 @@ export default function SettingsScreen() {
       </ThemedView>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+        <ThemedView style={[styles.sectionCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>
+            Account
+          </ThemedText>
+          <ThemedView style={[styles.infoRow, { borderBottomColor: theme.border }]}>
+            <ThemedText style={styles.infoLabel}>Signed in as</ThemedText>
+            <ThemedText style={[styles.infoValue, { flex: 1, textAlign: 'right' }]} numberOfLines={2}>
+              {session?.user?.email ?? '—'}
+            </ThemedText>
+          </ThemedView>
+          <TouchableOpacity
+            style={[styles.signOutRow, { borderColor: theme.border }]}
+            onPress={() => {
+              void signOut();
+            }}
+            activeOpacity={0.85}>
+            <ThemedText style={{ color: theme.primary, fontWeight: '600' }}>Sign out</ThemedText>
+          </TouchableOpacity>
+        </ThemedView>
+
         <ThemedView style={[styles.sectionCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
             App Information
@@ -85,7 +113,8 @@ export default function SettingsScreen() {
             your spending habits.
           </ThemedText>
           <ThemedText style={[styles.aboutText, { color: theme.mutedText }]}>
-            All your data is stored locally on your device and is never shared externally.
+            Your budget is stored in your Supabase project and tied to your account. Enable Row Level Security
+            policies as in the included schema so only you can read and write your rows.
           </ThemedText>
         </ThemedView>
       </ScrollView>
@@ -129,6 +158,13 @@ const styles = StyleSheet.create({
   infoValue: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  signOutRow: {
+    marginTop: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
   },
   resetBox: {
     flexDirection: 'row',

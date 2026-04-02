@@ -64,13 +64,17 @@ export default function GoalDetailScreen() {
       return;
     }
 
-    updateGoal(id, {
-      name: name.trim(),
-      targetAmount: target,
-      currentAmount: current,
-      deadline: deadline || undefined,
-    });
-    setIsEditing(false);
+    try {
+      await updateGoal(id, {
+        name: name.trim(),
+        targetAmount: target,
+        currentAmount: current,
+        deadline: deadline || undefined,
+      });
+      setIsEditing(false);
+    } catch {
+      Alert.alert('Could not save', 'Check your connection and Supabase configuration.');
+    }
   };
 
   const handleDelete = () => {
@@ -80,9 +84,13 @@ export default function GoalDetailScreen() {
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: () => {
-          deleteGoal(id);
-          router.back();
+        onPress: async () => {
+          try {
+            await deleteGoal(id);
+            router.back();
+          } catch {
+            Alert.alert('Could not delete', 'Check your connection and Supabase configuration.');
+          }
         },
       },
     ]);

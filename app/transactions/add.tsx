@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { StyleSheet, ScrollView } from 'react-native';
+import { Alert, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ThemedView } from '@/components/themed-view';
@@ -16,9 +16,13 @@ export default function AddTransactionScreen() {
     }
   }, [isInitialized, initialize]);
 
-  const handleSubmit = (data: Parameters<typeof addTransaction>[0]) => {
-    addTransaction(data);
-    router.back();
+  const handleSubmit = async (data: Parameters<typeof addTransaction>[0]) => {
+    try {
+      await addTransaction(data);
+      router.back();
+    } catch {
+      Alert.alert('Could not save', 'Check your connection and Supabase configuration.');
+    }
   };
 
   return (
