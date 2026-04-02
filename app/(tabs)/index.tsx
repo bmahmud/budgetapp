@@ -92,7 +92,10 @@ export default function HomeScreen() {
         {/* Header */}
         <ThemedView style={styles.header}>
           <ThemedText type="title" style={styles.headerTitle}>
-            Personal Budget
+            Fringe
+          </ThemedText>
+          <ThemedText style={[styles.appSubtitle, { color: theme.mutedText }]}>
+            Budgeting personal Mobile App
           </ThemedText>
           <ThemedText style={[styles.tagline, { color: theme.mutedText }]}>
             Track. Plan. Save. Effortlessly.
@@ -312,9 +315,15 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
   },
+  appSubtitle: {
+    fontSize: 12,
+    marginTop: 4,
+    fontWeight: '400',
+    letterSpacing: 0.2,
+  },
   tagline: {
     fontSize: 15,
-    marginTop: 6,
+    marginTop: 8,
     fontWeight: '500',
   },
   summaryRow: {
