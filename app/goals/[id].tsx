@@ -9,11 +9,12 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useBudgetStore } from '@/store/budget-store';
 import { Goal } from '@/types';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
+import { Colors, FringePalette } from '@/constants/theme';
 
 export default function GoalDetailScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
   const { id } = useLocalSearchParams<{ id: string }>();
   const { goals, updateGoal, deleteGoal, isInitialized, initialize } = useBudgetStore();
   const [goal, setGoal] = useState<Goal | undefined>();
@@ -23,8 +24,8 @@ export default function GoalDetailScreen() {
   const [currentAmount, setCurrentAmount] = useState('');
   const [deadline, setDeadline] = useState('');
 
-  const textColor = Colors[colorScheme ?? 'light'].text;
-  const borderColor = colorScheme === 'dark' ? '#333' : '#E0E0E0';
+  const textColor = theme.text;
+  const borderColor = theme.border;
 
   useEffect(() => {
     if (!isInitialized) {
@@ -101,21 +102,21 @@ export default function GoalDetailScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <ThemedView style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <IconSymbol name="chevron.left" size={24} color="#0a7ea4" />
+          <IconSymbol name="chevron.left" size={24} color={theme.primary} />
         </TouchableOpacity>
         <ThemedText type="subtitle">{isEditing ? 'Edit Goal' : 'Goal Details'}</ThemedText>
         <View style={styles.headerRight}>
           {isEditing ? (
             <TouchableOpacity onPress={handleSave}>
-              <IconSymbol name="checkmark.circle.fill" size={24} color="#4CAF50" />
+              <IconSymbol name="checkmark.circle.fill" size={24} color={FringePalette.income} />
             </TouchableOpacity>
           ) : (
             <>
               <TouchableOpacity onPress={() => setIsEditing(true)} style={styles.editButton}>
-                <IconSymbol name="pencil" size={20} color="#0a7ea4" />
+                <IconSymbol name="pencil" size={20} color={theme.primary} />
               </TouchableOpacity>
               <TouchableOpacity onPress={handleDelete}>
-                <IconSymbol name="trash.fill" size={24} color="#F44336" />
+                <IconSymbol name="trash.fill" size={24} color={FringePalette.expense} />
               </TouchableOpacity>
             </>
           )}

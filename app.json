@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "rnbudgetapp",
-    "slug": "rnbudgetapp",
-    "version": "1.0.0",
+    "name": "Fringe",
+    "slug": "fringe-budget",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "rnbudgetapp",
+    "scheme": "fringe",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -13,7 +13,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#6D28D9",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -33,9 +33,9 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
+          "backgroundColor": "#F4F2FF",
           "dark": {
-            "backgroundColor": "#000000"
+            "backgroundColor": "#1A1528"
           }
         }
       ]

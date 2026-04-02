@@ -4,7 +4,7 @@ import { ThemedView } from './themed-view';
 import { IconSymbol } from './ui/icon-symbol';
 import { SummaryMetrics } from '@/types';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
+import { Colors, FringePalette } from '@/constants/theme';
 
 interface SummaryCardProps {
   title: string;
@@ -16,10 +16,22 @@ interface SummaryCardProps {
 
 function SummaryCard({ title, value, icon, color, isPositive }: SummaryCardProps) {
   const colorScheme = useColorScheme();
-  const valueColor = isPositive !== undefined ? (isPositive ? '#4CAF50' : '#F44336') : Colors[colorScheme ?? 'light'].text;
+  const valueColor =
+    isPositive !== undefined
+      ? isPositive
+        ? FringePalette.income
+        : FringePalette.expense
+      : Colors[colorScheme ?? 'light'].text;
 
   return (
-    <ThemedView style={styles.card}>
+    <ThemedView
+      style={[
+        styles.card,
+        {
+          backgroundColor: Colors[colorScheme ?? 'light'].card,
+          borderColor: Colors[colorScheme ?? 'light'].border,
+        },
+      ]}>
       <View style={[styles.iconContainer, { backgroundColor: `${color}20` }]}>
         <IconSymbol name={icon} size={24} color={color} />
       </View>
@@ -38,13 +50,25 @@ interface SummaryCardsProps {
 export function SummaryCards({ metrics }: SummaryCardsProps) {
   return (
     <View style={styles.container}>
-      <SummaryCard title="Income" value={metrics.totalIncome} icon="arrow.down.circle.fill" color="#4CAF50" isPositive />
-      <SummaryCard title="Expenses" value={metrics.totalExpenses} icon="arrow.up.circle.fill" color="#F44336" isPositive={false} />
+      <SummaryCard
+        title="Income"
+        value={metrics.totalIncome}
+        icon="arrow.down.circle.fill"
+        color={FringePalette.income}
+        isPositive
+      />
+      <SummaryCard
+        title="Expenses"
+        value={metrics.totalExpenses}
+        icon="arrow.up.circle.fill"
+        color={FringePalette.expense}
+        isPositive={false}
+      />
       <SummaryCard
         title="Balance"
         value={metrics.netBalance}
         icon="dollarsign.circle.fill"
-        color={metrics.netBalance >= 0 ? '#4CAF50' : '#F44336'}
+        color={metrics.netBalance >= 0 ? FringePalette.income : FringePalette.expense}
         isPositive={metrics.netBalance >= 0}
       />
     </View>
@@ -60,7 +84,8 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
+    borderWidth: 1,
     alignItems: 'center',
   },
   iconContainer: {

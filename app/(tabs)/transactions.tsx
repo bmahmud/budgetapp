@@ -5,12 +5,16 @@ import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { TransactionCard } from '@/components/transaction-card';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useBudgetStore } from '@/store/budget-store';
 import { useRouter } from 'expo-router';
 import { Transaction } from '@/types';
 
 export default function TransactionsScreen() {
   const router = useRouter();
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
   const { transactions, categories, isLoading, isInitialized, initialize } = useBudgetStore();
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
 
@@ -36,27 +40,39 @@ export default function TransactionsScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
       <ThemedView style={styles.header}>
         <ThemedText type="title">Transactions</ThemedText>
         <TouchableOpacity onPress={() => router.push('/transactions/add')}>
-          <IconSymbol name="plus.circle.fill" size={28} color="#0a7ea4" />
+          <IconSymbol name="plus.circle.fill" size={28} color={theme.primary} />
         </TouchableOpacity>
       </ThemedView>
 
       <View style={styles.filterContainer}>
         <TouchableOpacity
-          style={[styles.filterButton, filter === 'all' && styles.filterButtonActive]}
+          style={[
+            styles.filterButton,
+            { borderColor: theme.border },
+            filter === 'all' && [styles.filterButtonActive, { backgroundColor: theme.tint, borderColor: theme.tint }],
+          ]}
           onPress={() => setFilter('all')}>
           <ThemedText style={[styles.filterText, filter === 'all' && styles.filterTextActive]}>All</ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.filterButton, filter === 'income' && styles.filterButtonActive]}
+          style={[
+            styles.filterButton,
+            { borderColor: theme.border },
+            filter === 'income' && [styles.filterButtonActive, { backgroundColor: theme.tint, borderColor: theme.tint }],
+          ]}
           onPress={() => setFilter('income')}>
           <ThemedText style={[styles.filterText, filter === 'income' && styles.filterTextActive]}>Income</ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.filterButton, filter === 'expense' && styles.filterButtonActive]}
+          style={[
+            styles.filterButton,
+            { borderColor: theme.border },
+            filter === 'expense' && [styles.filterButtonActive, { backgroundColor: theme.tint, borderColor: theme.tint }],
+          ]}
           onPress={() => setFilter('expense')}>
           <ThemedText style={[styles.filterText, filter === 'expense' && styles.filterTextActive]}>Expense</ThemedText>
         </TouchableOpacity>
@@ -71,7 +87,7 @@ export default function TransactionsScreen() {
           <IconSymbol name="tray" size={64} color="#999" />
           <ThemedText style={styles.emptyText}>No transactions found</ThemedText>
           <TouchableOpacity
-            style={styles.addButton}
+            style={[styles.addButton, { backgroundColor: theme.primary }]}
             onPress={() => router.push('/transactions/add')}>
             <IconSymbol name="plus.circle.fill" size={20} color="#fff" />
             <ThemedText style={styles.addButtonText}>Add Transaction</ThemedText>
@@ -111,12 +127,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
   },
-  filterButtonActive: {
-    backgroundColor: '#0a7ea4',
-    borderColor: '#0a7ea4',
-  },
+  filterButtonActive: {},
   filterText: {
     fontSize: 14,
     fontWeight: '600',
@@ -149,10 +161,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#0a7ea4',
     paddingHorizontal: 24,
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 12,
   },
   addButtonText: {
     color: '#fff',

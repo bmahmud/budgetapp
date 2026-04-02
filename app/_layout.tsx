@@ -1,9 +1,10 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import 'react-native-reanimated';
 
+import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useBudgetStore } from '@/store/budget-store';
 
@@ -16,6 +17,23 @@ export default function RootLayout() {
   const initialize = useBudgetStore((state) => state.initialize);
   const isInitialized = useBudgetStore((state) => state.isInitialized);
 
+  const navigationTheme = useMemo(() => {
+    const base = colorScheme === 'dark' ? DarkTheme : DefaultTheme;
+    const c = Colors[colorScheme ?? 'light'];
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        primary: c.primary,
+        background: c.background,
+        card: c.card,
+        text: c.text,
+        border: c.border,
+        notification: c.primary,
+      },
+    };
+  }, [colorScheme]);
+
   useEffect(() => {
     if (!isInitialized) {
       initialize();
@@ -23,7 +41,7 @@ export default function RootLayout() {
   }, [isInitialized, initialize]);
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={navigationTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="transactions/add" options={{ presentation: 'modal', title: 'Add Transaction' }} />

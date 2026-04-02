@@ -5,7 +5,7 @@ import { IconSymbol } from './ui/icon-symbol';
 import { Transaction, Category } from '@/types';
 import { format } from 'date-fns';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
+import { Colors, FringePalette } from '@/constants/theme';
 
 interface TransactionCardProps {
   transaction: Transaction;
@@ -14,13 +14,15 @@ interface TransactionCardProps {
 }
 
 export function TransactionCard({ transaction, category, onPress }: TransactionCardProps) {
-  const colorScheme = useColorScheme();
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
   const isIncome = transaction.type === 'income';
-  const amountColor = isIncome ? '#4CAF50' : '#F44336';
+  const amountColor = isIncome ? FringePalette.income : FringePalette.expense;
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-      <ThemedView style={styles.card}>
+      <ThemedView
+        style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
         <View style={styles.leftSection}>
           <View
             style={[
@@ -65,7 +67,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 16,
     marginVertical: 4,
-    borderRadius: 12,
+    borderRadius: 14,
+    borderWidth: 1,
     justifyContent: 'space-between',
     alignItems: 'center',
   },

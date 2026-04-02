@@ -6,11 +6,15 @@ import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { TransactionForm } from '@/components/transaction-form';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Colors, FringePalette } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useBudgetStore } from '@/store/budget-store';
 import { Transaction } from '@/types';
 
 export default function TransactionDetailScreen() {
   const router = useRouter();
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
   const { id } = useLocalSearchParams<{ id: string }>();
   const { transactions, categories, updateTransaction, deleteTransaction, isInitialized, initialize } =
     useBudgetStore();
@@ -64,11 +68,11 @@ export default function TransactionDetailScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <ThemedView style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <IconSymbol name="chevron.left" size={24} color="#0a7ea4" />
+          <IconSymbol name="chevron.left" size={24} color={theme.primary} />
         </TouchableOpacity>
         <ThemedText type="subtitle">Edit Transaction</ThemedText>
         <TouchableOpacity onPress={handleDelete}>
-          <IconSymbol name="trash.fill" size={24} color="#F44336" />
+          <IconSymbol name="trash.fill" size={24} color={FringePalette.expense} />
         </TouchableOpacity>
       </ThemedView>
 

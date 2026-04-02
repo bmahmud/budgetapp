@@ -5,9 +5,9 @@ import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { SummaryCards } from '@/components/summary-card';
 import { DonutChart } from '@/components/donut-chart';
+import { Colors, FringePalette } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useBudgetStore } from '@/store/budget-store';
-import { CategorySummary } from '@/types';
-import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths } from 'date-fns';
 
 // Conditionally import VictoryPie - it may not work on web
 let VictoryPie: any = null;
@@ -23,6 +23,8 @@ if (Platform.OS !== 'web') {
 type Period = 'month' | 'year' | 'all';
 
 export default function ReportsScreen() {
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
   const { getSummaryMetrics, getCategorySummaries, isInitialized, initialize } = useBudgetStore();
   const [period, setPeriod] = useState<Period>('month');
 
@@ -79,24 +81,36 @@ export default function ReportsScreen() {
 
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
       <ThemedView style={styles.header}>
         <ThemedText type="title">Reports & Analytics</ThemedText>
       </ThemedView>
 
       <View style={styles.periodSelector}>
         <TouchableOpacity
-          style={[styles.periodButton, period === 'month' && styles.periodButtonActive]}
+          style={[
+            styles.periodButton,
+            { borderColor: theme.border },
+            period === 'month' && [styles.periodButtonActive, { backgroundColor: theme.tint, borderColor: theme.tint }],
+          ]}
           onPress={() => setPeriod('month')}>
           <ThemedText style={[styles.periodText, period === 'month' && styles.periodTextActive]}>Month</ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.periodButton, period === 'year' && styles.periodButtonActive]}
+          style={[
+            styles.periodButton,
+            { borderColor: theme.border },
+            period === 'year' && [styles.periodButtonActive, { backgroundColor: theme.tint, borderColor: theme.tint }],
+          ]}
           onPress={() => setPeriod('year')}>
           <ThemedText style={[styles.periodText, period === 'year' && styles.periodTextActive]}>Year</ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.periodButton, period === 'all' && styles.periodButtonActive]}
+          style={[
+            styles.periodButton,
+            { borderColor: theme.border },
+            period === 'all' && [styles.periodButtonActive, { backgroundColor: theme.tint, borderColor: theme.tint }],
+          ]}
           onPress={() => setPeriod('all')}>
           <ThemedText style={[styles.periodText, period === 'all' && styles.periodTextActive]}>All Time</ThemedText>
         </TouchableOpacity>
@@ -106,7 +120,7 @@ export default function ReportsScreen() {
         <SummaryCards metrics={metrics} />
 
         {expenseSummaries.length > 0 && (
-          <ThemedView style={styles.chartSection}>
+          <ThemedView style={[styles.chartSection, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <ThemedText type="subtitle" style={styles.chartTitle}>
               Spending by Category
             </ThemedText>
@@ -120,7 +134,11 @@ export default function ReportsScreen() {
                 />
               ) : (
                 <View style={styles.chartFallback}>
-                  <View style={styles.chartFallbackCircle}>
+                  <View
+                    style={[
+                      styles.chartFallbackCircle,
+                      { backgroundColor: theme.card, borderColor: theme.border },
+                    ]}>
                     <ThemedText 
                       style={styles.chartTotal}
                       adjustsFontSizeToFit
@@ -150,7 +168,7 @@ export default function ReportsScreen() {
           </ThemedView>
         )}
 
-        <ThemedView style={styles.chartSection}>
+        <ThemedView style={[styles.chartSection, { backgroundColor: theme.card, borderColor: theme.border }]}>
           <ThemedText type="subtitle" style={styles.chartTitle}>
             Income vs Expenses
           </ThemedText>
@@ -161,9 +179,9 @@ export default function ReportsScreen() {
                   data={incomeExpensePieData}
                   width={300}
                   height={300}
-                  colorScale={['#4CAF50', '#F44336']}
+                  colorScale={[FringePalette.income, FringePalette.expense]}
                   innerRadius={80}
-                  labelRadius={({ innerRadius }) => (innerRadius as number) + 30}
+                  labelRadius={({ innerRadius }: { innerRadius: number }) => innerRadius + 30}
                   style={{
                     labels: { fontSize: 12, fill: '#fff', fontWeight: 'bold' },
                   }}
@@ -184,14 +202,14 @@ export default function ReportsScreen() {
                 <ThemedText style={styles.chartFallbackTitle}>Income vs Expenses</ThemedText>
                 {metrics.totalIncome > 0 && (
                   <View style={styles.fallbackItem}>
-                    <View style={[styles.fallbackColorBar, { backgroundColor: '#4CAF50' }]} />
+                    <View style={[styles.fallbackColorBar, { backgroundColor: FringePalette.income }]} />
                     <ThemedText style={styles.fallbackLabel}>Income</ThemedText>
                     <ThemedText style={styles.fallbackValue}>${metrics.totalIncome.toLocaleString()}</ThemedText>
                   </View>
                 )}
                 {metrics.totalExpenses > 0 && (
                   <View style={styles.fallbackItem}>
-                    <View style={[styles.fallbackColorBar, { backgroundColor: '#F44336' }]} />
+                    <View style={[styles.fallbackColorBar, { backgroundColor: FringePalette.expense }]} />
                     <ThemedText style={styles.fallbackLabel}>Expenses</ThemedText>
                     <ThemedText style={styles.fallbackValue}>${metrics.totalExpenses.toLocaleString()}</ThemedText>
                   </View>
@@ -199,7 +217,11 @@ export default function ReportsScreen() {
                 {metrics.totalIncome > 0 || metrics.totalExpenses > 0 ? (
                   <View style={[styles.fallbackItem, { marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#E0E0E0' }]}>
                     <ThemedText style={styles.fallbackLabel}>Net Balance</ThemedText>
-                    <ThemedText style={[styles.fallbackValue, { color: metrics.netBalance >= 0 ? '#4CAF50' : '#F44336' }]}>
+                    <ThemedText
+                      style={[
+                        styles.fallbackValue,
+                        { color: metrics.netBalance >= 0 ? FringePalette.income : FringePalette.expense },
+                      ]}>
                       ${metrics.netBalance.toLocaleString()}
                     </ThemedText>
                   </View>
@@ -212,12 +234,14 @@ export default function ReportsScreen() {
         </ThemedView>
 
         {expenseSummaries.length > 0 && (
-          <ThemedView style={styles.section}>
+          <ThemedView style={[styles.section, { backgroundColor: theme.card, borderColor: theme.border, borderRadius: 16, borderWidth: 1, padding: 16 }]}>
             <ThemedText type="subtitle" style={styles.sectionTitle}>
               Top Categories
             </ThemedText>
             {expenseSummaries.slice(0, 5).map((summary) => (
-              <ThemedView key={summary.categoryId} style={styles.categoryRow}>
+              <ThemedView
+                key={summary.categoryId}
+                style={[styles.categoryRow, { borderBottomColor: theme.border }]}>
                 <ThemedText style={styles.categoryName}>{summary.categoryName}</ThemedText>
                 <View style={styles.categoryAmountContainer}>
                   <ThemedText style={styles.categoryAmount}>${Math.round(summary.totalAmount).toLocaleString()}</ThemedText>
@@ -249,15 +273,11 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
     alignItems: 'center',
   },
-  periodButtonActive: {
-    backgroundColor: '#0a7ea4',
-    borderColor: '#0a7ea4',
-  },
+  periodButtonActive: {},
   periodText: {
     fontSize: 14,
     fontWeight: '600',
@@ -275,7 +295,8 @@ const styles = StyleSheet.create({
   chartSection: {
     marginTop: 24,
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
+    borderWidth: 1,
   },
   chartTitle: {
     marginBottom: 16,
@@ -296,15 +317,21 @@ const styles = StyleSheet.create({
     position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
-    top: 110,
+    top: 120,
     left: 100,
     width: 100,
   },
   chartTotal: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: 'bold',
     textAlign: 'center',
     maxWidth: 120,
+  },
+  chartSubtitle: {
+    fontSize: 12,
+    opacity: 0.7,
+    textAlign: 'center',
+    marginTop: 4,
   },
   categoryLegend: {
     marginTop: 16,
@@ -325,32 +352,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     opacity: 0.9,
   },
-  chartWrapper: {
-    position: 'relative',
-    width: 300,
-    height: 300,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chartCenter: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-    top: 120,
-    left: 100,
-    width: 100,
-  },
-  chartTotal: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  chartSubtitle: {
-    fontSize: 12,
-    opacity: 0.7,
-    textAlign: 'center',
-    marginTop: 4,
-  },
   section: {
     marginTop: 24,
   },
@@ -363,7 +364,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
   },
   categoryName: {
     fontSize: 16,
@@ -392,9 +392,7 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: '#1E1E1E',
     borderWidth: 2,
-    borderColor: '#333',
     alignItems: 'center',
     justifyContent: 'center',
   },

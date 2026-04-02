@@ -13,15 +13,16 @@ import { Colors } from '@/constants/theme';
 
 export default function GoalsScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
   const { goals, addGoal, isLoading, isInitialized, initialize } = useBudgetStore();
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
   const [deadline, setDeadline] = useState('');
 
-  const textColor = Colors[colorScheme ?? 'light'].text;
-  const borderColor = colorScheme === 'dark' ? '#333' : '#E0E0E0';
+  const textColor = theme.text;
+  const borderColor = theme.border;
 
   useEffect(() => {
     if (!isInitialized) {
@@ -43,6 +44,7 @@ export default function GoalsScreen() {
     addGoal({
       name: name.trim(),
       targetAmount: amount,
+      currentAmount: 0,
       deadline: deadline || undefined,
     });
     setName('');
@@ -56,11 +58,11 @@ export default function GoalsScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
       <ThemedView style={styles.header}>
         <ThemedText type="title">Financial Goals</ThemedText>
         <TouchableOpacity onPress={() => setShowForm(!showForm)}>
-          <IconSymbol name={showForm ? 'xmark.circle.fill' : 'plus.circle.fill'} size={28} color="#0a7ea4" />
+          <IconSymbol name={showForm ? 'xmark.circle.fill' : 'plus.circle.fill'} size={28} color={theme.primary} />
         </TouchableOpacity>
       </ThemedView>
 
@@ -92,10 +94,14 @@ export default function GoalsScreen() {
             placeholderTextColor="#999"
           />
           <View style={styles.formButtons}>
-            <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={() => setShowForm(false)}>
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: theme.border }]}
+              onPress={() => setShowForm(false)}>
               <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, styles.submitButton]} onPress={handleAddGoal}>
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: theme.primary }]}
+              onPress={handleAddGoal}>
               <ThemedText style={styles.submitButtonText}>Create</ThemedText>
             </TouchableOpacity>
           </View>
@@ -163,16 +169,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
-  cancelButton: {
-    backgroundColor: '#E0E0E0',
-  },
+  cancelButton: {},
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
   },
-  submitButton: {
-    backgroundColor: '#0a7ea4',
-  },
+  submitButton: {},
   submitButtonText: {
     fontSize: 16,
     fontWeight: '600',

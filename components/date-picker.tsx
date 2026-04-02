@@ -14,13 +14,13 @@ interface DatePickerProps {
 }
 
 export function DatePicker({ value, onChange, placeholder = 'mm / dd / yyyy', borderColor }: DatePickerProps) {
-  const colorScheme = useColorScheme();
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
   const [showPicker, setShowPicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(value ? new Date(value) : new Date());
 
-  const textColor = Colors[colorScheme ?? 'light'].text;
-  const defaultBorderColor = colorScheme === 'dark' ? '#333' : '#E0E0E0';
-  const finalBorderColor = borderColor || defaultBorderColor;
+  const textColor = theme.text;
+  const finalBorderColor = borderColor || theme.border;
 
   const handleDateChange = (date: Date) => {
     setSelectedDate(date);
@@ -43,7 +43,7 @@ export function DatePicker({ value, onChange, placeholder = 'mm / dd / yyyy', bo
 
       <Modal visible={showPicker} transparent animationType="slide" onRequestClose={() => setShowPicker(false)}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
             <View style={styles.modalHeader}>
               <ThemedText type="subtitle">Select Date</ThemedText>
               <TouchableOpacity onPress={() => setShowPicker(false)}>
@@ -110,8 +110,8 @@ export function DatePicker({ value, onChange, placeholder = 'mm / dd / yyyy', bo
                         style={[
                           styles.dayCell,
                           isCurrentMonth && styles.dayCellCurrentMonth,
-                          isSelected && styles.dayCellSelected,
-                          isToday && styles.dayCellToday,
+                          isSelected && { backgroundColor: theme.primary },
+                          isToday && !isSelected && { borderWidth: 1, borderColor: theme.primary },
                         ]}
                         onPress={() => handleDateChange(new Date(currentDate))}>
                         <ThemedText
@@ -119,7 +119,7 @@ export function DatePicker({ value, onChange, placeholder = 'mm / dd / yyyy', bo
                             styles.dayText,
                             !isCurrentMonth && styles.dayTextOtherMonth,
                             isSelected && styles.dayTextSelected,
-                            isToday && !isSelected && styles.dayTextToday,
+                            isToday && !isSelected && { color: theme.primary, fontWeight: '600' },
                           ]}>
                           {currentDate.getDate()}
                         </ThemedText>
@@ -136,12 +136,12 @@ export function DatePicker({ value, onChange, placeholder = 'mm / dd / yyyy', bo
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
+                style={[styles.modalButton, { backgroundColor: theme.border }]}
                 onPress={() => setShowPicker(false)}>
                 <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, styles.confirmButton]}
+                style={[styles.modalButton, { backgroundColor: theme.primary }]}
                 onPress={() => handleDateChange(selectedDate)}>
                 <ThemedText style={styles.confirmButtonText}>Confirm</ThemedText>
               </TouchableOpacity>
@@ -173,7 +173,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#1E1E1E',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
@@ -223,13 +222,6 @@ const styles = StyleSheet.create({
   dayCellCurrentMonth: {
     // Default styling
   },
-  dayCellSelected: {
-    backgroundColor: '#0a7ea4',
-  },
-  dayCellToday: {
-    borderWidth: 1,
-    borderColor: '#0a7ea4',
-  },
   dayText: {
     fontSize: 14,
   },
@@ -238,10 +230,6 @@ const styles = StyleSheet.create({
   },
   dayTextSelected: {
     color: '#fff',
-    fontWeight: '600',
-  },
-  dayTextToday: {
-    color: '#0a7ea4',
     fontWeight: '600',
   },
   modalButtons: {
@@ -254,16 +242,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
-  cancelButton: {
-    backgroundColor: '#333',
-  },
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
-  },
-  confirmButton: {
-    backgroundColor: '#0a7ea4',
   },
   confirmButtonText: {
     fontSize: 16,

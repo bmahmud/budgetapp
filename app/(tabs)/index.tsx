@@ -1,18 +1,19 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Colors, FringePalette } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useBudgetStore } from '@/store/budget-store';
 import { format } from 'date-fns';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-
-const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const router = useRouter();
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
   const {
     transactions,
     goals,
@@ -76,68 +77,90 @@ export default function HomeScreen() {
 
   const getCategoryById = (id: string) => categories.find((c) => c.id === id);
 
+  const cardSurface = [
+    styles.summaryCard,
+    {
+      backgroundColor: theme.card,
+      borderColor: theme.border,
+      shadowColor: FringePalette.purple,
+    },
+  ];
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <ThemedView style={styles.header}>
-          <ThemedText type="title" style={styles.headerTitle}>Personal Budget Tracker</ThemedText>
+          <ThemedText type="title" style={styles.headerTitle}>
+            Personal Budget
+          </ThemedText>
+          <ThemedText style={[styles.tagline, { color: theme.mutedText }]}>
+            Track. Plan. Save. Effortlessly.
+          </ThemedText>
         </ThemedView>
 
         {/* Summary Cards Row */}
         <View style={styles.summaryRow}>
-          <View style={styles.summaryCard}>
+          <View style={cardSurface}>
             <View style={styles.summaryCardHeader}>
-              <IconSymbol name="wallet.pass.fill" size={20} color="#4CAF50" />
+              <IconSymbol name="wallet.pass.fill" size={20} color={FringePalette.income} />
             </View>
-            <ThemedText style={styles.summaryLabel}>Total Balance</ThemedText>
+            <ThemedText style={[styles.summaryLabel, { color: theme.mutedText }]}>Total Balance</ThemedText>
             <ThemedText type="title" style={styles.summaryValue}>${Math.abs(totalBalance).toLocaleString()}</ThemedText>
             {hasBalanceData && balanceChange !== null && (
               <View style={styles.summaryChange}>
-                <IconSymbol 
-                  name={balanceChange >= 0 ? "arrow.up" : "arrow.down"} 
-                  size={12} 
-                  color={balanceChange >= 0 ? "#4CAF50" : "#F44336"} 
+                <IconSymbol
+                  name={balanceChange >= 0 ? 'arrow.up' : 'arrow.down'}
+                  size={12}
+                  color={balanceChange >= 0 ? FringePalette.income : FringePalette.expense}
                 />
-                <ThemedText style={[styles.summaryChangeText, { color: balanceChange >= 0 ? "#4CAF50" : "#F44336" }]}>
+                <ThemedText
+                  style={[
+                    styles.summaryChangeText,
+                    { color: balanceChange >= 0 ? FringePalette.income : FringePalette.expense },
+                  ]}>
                   {Math.abs(balanceChange).toFixed(0)}% vs last month
                 </ThemedText>
               </View>
             )}
           </View>
 
-          <View style={styles.summaryCard}>
+          <View style={cardSurface}>
             <View style={styles.summaryCardHeader}>
-              <IconSymbol name="chart.line.uptrend.xyaxis" size={20} color="#2196F3" />
+              <IconSymbol name="chart.line.uptrend.xyaxis" size={20} color={FringePalette.teal} />
             </View>
-            <ThemedText style={styles.summaryLabel}>Total Income</ThemedText>
+            <ThemedText style={[styles.summaryLabel, { color: theme.mutedText }]}>Total Income</ThemedText>
             <ThemedText type="title" style={styles.summaryValue}>${metrics.totalIncome.toLocaleString()}</ThemedText>
           </View>
         </View>
 
         <View style={styles.summaryRow}>
-          <View style={styles.summaryCard}>
+          <View style={cardSurface}>
             <View style={styles.summaryCardHeader}>
-              <IconSymbol name="chart.line.downtrend.xyaxis" size={20} color="#F44336" />
+              <IconSymbol name="chart.line.downtrend.xyaxis" size={20} color={FringePalette.expense} />
             </View>
-            <ThemedText style={styles.summaryLabel}>Total Expenses</ThemedText>
+            <ThemedText style={[styles.summaryLabel, { color: theme.mutedText }]}>Total Expenses</ThemedText>
             <ThemedText type="title" style={styles.summaryValue}>${metrics.totalExpenses.toLocaleString()}</ThemedText>
           </View>
 
-          <View style={styles.summaryCard}>
+          <View style={cardSurface}>
             <View style={styles.summaryCardHeader}>
-              <IconSymbol name="banknote.fill" size={20} color="#FF9800" />
+              <IconSymbol name="banknote.fill" size={20} color={FringePalette.purpleLight} />
             </View>
-            <ThemedText style={styles.summaryLabel}>Savings Rate</ThemedText>
+            <ThemedText style={[styles.summaryLabel, { color: theme.mutedText }]}>Savings Rate</ThemedText>
             <ThemedText type="title" style={styles.summaryValue}>{savingsRate.toFixed(1)}%</ThemedText>
             {hasSavingsData && savingsRateChange !== null && (
               <View style={styles.summaryChange}>
-                <IconSymbol 
-                  name={savingsRateChange >= 0 ? "arrow.up" : "arrow.down"} 
-                  size={12} 
-                  color={savingsRateChange >= 0 ? "#4CAF50" : "#F44336"} 
+                <IconSymbol
+                  name={savingsRateChange >= 0 ? 'arrow.up' : 'arrow.down'}
+                  size={12}
+                  color={savingsRateChange >= 0 ? FringePalette.income : FringePalette.expense}
                 />
-                <ThemedText style={[styles.summaryChangeText, { color: savingsRateChange >= 0 ? "#4CAF50" : "#F44336" }]}>
+                <ThemedText
+                  style={[
+                    styles.summaryChangeText,
+                    { color: savingsRateChange >= 0 ? FringePalette.income : FringePalette.expense },
+                  ]}>
                   {Math.abs(savingsRateChange).toFixed(1)}% vs last month
                 </ThemedText>
               </View>
@@ -149,8 +172,8 @@ export default function HomeScreen() {
         <View style={styles.transactionsSection}>
           <View style={styles.sectionHeader}>
             <ThemedText type="subtitle" style={styles.sectionTitle}>Recent Transactions</ThemedText>
-            <TouchableOpacity onPress={() => router.push('/transactions')}>
-              <ThemedText style={styles.viewAll}>View All →</ThemedText>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/transactions')}>
+              <ThemedText style={[styles.viewAll, { color: theme.primary }]}>View All →</ThemedText>
             </TouchableOpacity>
           </View>
 
@@ -165,7 +188,10 @@ export default function HomeScreen() {
               return (
                 <TouchableOpacity
                   key={transaction.id}
-                  style={styles.transactionItem}
+                  style={[
+                    styles.transactionItem,
+                    { backgroundColor: theme.card, borderColor: theme.border },
+                  ]}
                   onPress={() => router.push(`/transactions/${transaction.id}`)}>
                   <View style={[styles.transactionIcon, { backgroundColor: `${category?.color || '#999'}20` }]}>
                     <IconSymbol name={category?.icon || 'circle.fill'} size={16} color={category?.color || '#999'} />
@@ -174,11 +200,16 @@ export default function HomeScreen() {
                     <ThemedText style={styles.transactionName} numberOfLines={1} ellipsizeMode="tail">
                       {transaction.notes || category?.name || 'Transaction'}
                     </ThemedText>
-                    <ThemedText style={styles.transactionMeta} numberOfLines={1} ellipsizeMode="tail">
-                      {category?.name || 'Uncategorized'} • {format(new Date(transaction.date), 'MMM dd')}
+                    <ThemedText style={[styles.transactionMeta, { color: theme.mutedText }]} numberOfLines={1} ellipsizeMode="tail">
+                      {category?.name || 'Uncategorized'} • {format(new Date(transaction.date), 'MMM dd')} •{' '}
+                      {isIncome ? '(I)' : '(E)'}
                     </ThemedText>
                   </View>
-                  <ThemedText style={[styles.transactionAmount, { color: isIncome ? '#4CAF50' : '#F44336' }]}>
+                  <ThemedText
+                    style={[
+                      styles.transactionAmount,
+                      { color: isIncome ? FringePalette.income : FringePalette.expense },
+                    ]}>
                     {isIncome ? '+' : '-'}${Math.round(transaction.amount).toLocaleString()}
                   </ThemedText>
                 </TouchableOpacity>
@@ -188,24 +219,27 @@ export default function HomeScreen() {
         </View>
 
         {/* Smart Tip */}
-        <ThemedView style={styles.smartTip}>
-          <IconSymbol name="lightbulb.fill" size={20} color="#FFC107" />
-          <ThemedText style={styles.smartTipText}>
+        <View style={styles.smartTip}>
+          <IconSymbol name="lightbulb.fill" size={20} color="#FFFFFF" />
+          <ThemedText lightColor="#FFFFFF" darkColor="#F8FAFC" style={styles.smartTipText}>
             {metrics.totalIncome > 0 ? (
-              <>You're spending {((metrics.totalExpenses / metrics.totalIncome) * 100).toFixed(0)}% of your income. Financial experts recommend keeping expenses under 70% for healthy savings.</>
+              <>
+                You're spending {((metrics.totalExpenses / metrics.totalIncome) * 100).toFixed(0)}% of your income.
+                Financial experts recommend keeping expenses under 70% for healthy savings.
+              </>
             ) : (
               <>Start tracking your income and expenses to get personalized financial insights and tips.</>
             )}
           </ThemedText>
-        </ThemedView>
+        </View>
 
         {/* Financial Goals Section */}
         {allGoals.length > 0 && (
           <View style={styles.goalsSection}>
             <View style={styles.sectionHeader}>
               <ThemedText type="subtitle" style={styles.sectionTitle}>Financial Goals</ThemedText>
-              <TouchableOpacity onPress={() => router.push('/goals')}>
-                <ThemedText style={styles.addButton}>Add Goal</ThemedText>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/goals')}>
+                <ThemedText style={[styles.addButton, { color: theme.primary }]}>Add Goal</ThemedText>
               </TouchableOpacity>
             </View>
 
@@ -215,16 +249,23 @@ export default function HomeScreen() {
               const isOverdue = daysLeft !== null && daysLeft < 0;
 
               return (
-                <ThemedView key={goal.id} style={styles.goalCard}>
+                <ThemedView
+                  key={goal.id}
+                  style={[styles.goalCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
                   <View style={styles.goalHeader}>
                     <ThemedText type="defaultSemiBold" style={styles.goalName}>{goal.name}</ThemedText>
-                    <ThemedText style={styles.goalStatus}>
+                    <ThemedText style={[styles.goalStatus, { color: theme.mutedText }]}>
                       {isOverdue ? 'Deadline passed' : daysLeft !== null ? `${daysLeft} days left` : 'No deadline'}
                     </ThemedText>
                   </View>
                   <View style={styles.goalProgress}>
-                    <View style={styles.progressBar}>
-                      <View style={[styles.progressFill, { width: `${Math.min(progress, 100)}%` }]} />
+                    <View style={[styles.progressBar, { backgroundColor: theme.border }]}>
+                      <View
+                        style={[
+                          styles.progressFill,
+                          { width: `${Math.min(progress, 100)}%`, backgroundColor: theme.primary },
+                        ]}
+                      />
                     </View>
                     <ThemedText style={styles.progressText}>{progress.toFixed(0)}%</ThemedText>
                   </View>
@@ -232,7 +273,7 @@ export default function HomeScreen() {
                     <ThemedText style={styles.goalAmount}>
                       ${goal.currentAmount.toLocaleString()} / ${goal.targetAmount.toLocaleString()}
                     </ThemedText>
-                    <ThemedText style={styles.goalRemaining}>
+                    <ThemedText style={[styles.goalRemaining, { color: theme.mutedText }]}>
                       ${(goal.targetAmount - goal.currentAmount).toLocaleString()} remaining to reach your goal
                     </ThemedText>
                   </View>
@@ -244,7 +285,7 @@ export default function HomeScreen() {
       </ScrollView>
 
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, { backgroundColor: theme.primary, shadowColor: theme.primary }]}
         onPress={() => router.push('/transactions/add')}
         activeOpacity={0.8}>
         <IconSymbol name="plus" size={24} color="#fff" />
@@ -271,6 +312,11 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
   },
+  tagline: {
+    fontSize: 15,
+    marginTop: 6,
+    fontWeight: '500',
+  },
   summaryRow: {
     flexDirection: 'row',
     gap: 12,
@@ -279,10 +325,12 @@ const styles = StyleSheet.create({
   summaryCard: {
     flex: 1,
     padding: 16,
-    borderRadius: 12,
-    backgroundColor: '#1E1E1E',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#333',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 3,
   },
   summaryCardHeader: {
     alignSelf: 'flex-end',
@@ -306,7 +354,6 @@ const styles = StyleSheet.create({
   },
   summaryChangeText: {
     fontSize: 11,
-    color: '#4CAF50',
   },
   transactionsSection: {
     marginTop: 20,
@@ -323,24 +370,20 @@ const styles = StyleSheet.create({
   },
   viewAll: {
     fontSize: 14,
-    color: '#0a7ea4',
     fontWeight: '600',
   },
   addButton: {
     fontSize: 14,
-    color: '#0a7ea4',
     fontWeight: '600',
     padding: 4,
   },
   transactionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 10,
+    padding: 12,
     marginBottom: 8,
-    borderRadius: 8,
-    backgroundColor: '#1E1E1E',
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#333',
   },
   transactionIcon: {
     width: 32,
@@ -375,16 +418,14 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 16,
     marginTop: 16,
-    borderRadius: 8,
-    backgroundColor: '#1E1E1E',
-    borderWidth: 1,
-    borderColor: '#333',
+    borderRadius: 14,
+    backgroundColor: FringePalette.tipBanner,
   },
   smartTipText: {
     flex: 1,
-    fontSize: 12,
-    lineHeight: 18,
-    opacity: 0.8,
+    fontSize: 13,
+    lineHeight: 20,
+    opacity: 0.95,
   },
   goalsSection: {
     marginTop: 24,
@@ -392,10 +433,8 @@ const styles = StyleSheet.create({
   goalCard: {
     padding: 16,
     marginBottom: 12,
-    borderRadius: 12,
-    backgroundColor: '#1E1E1E',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#333',
   },
   goalHeader: {
     flexDirection: 'row',
@@ -420,13 +459,11 @@ const styles = StyleSheet.create({
   progressBar: {
     flex: 1,
     height: 8,
-    backgroundColor: '#333',
     borderRadius: 4,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#4CAF50',
     borderRadius: 4,
   },
   progressText: {
@@ -461,13 +498,11 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#0a7ea4',
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    elevation: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
   },
 });

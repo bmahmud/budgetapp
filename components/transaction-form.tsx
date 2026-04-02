@@ -17,7 +17,8 @@ interface TransactionFormProps {
 }
 
 export function TransactionForm({ categories, initialData, onSubmit, onCancel }: TransactionFormProps) {
-  const colorScheme = useColorScheme();
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
   const [amount, setAmount] = useState(initialData?.amount?.toString() || '');
   const [date, setDate] = useState(
     initialData?.date || format(new Date(), 'yyyy-MM-dd')
@@ -27,8 +28,8 @@ export function TransactionForm({ categories, initialData, onSubmit, onCancel }:
   const [type, setType] = useState<'income' | 'expense'>(initialData?.type || 'expense');
   const [isRecurring, setIsRecurring] = useState(initialData?.isRecurring || false);
 
-  const textColor = Colors[colorScheme ?? 'light'].text;
-  const borderColor = colorScheme === 'dark' ? '#333' : '#E0E0E0';
+  const textColor = theme.text;
+  const borderColor = theme.border;
 
   const filteredCategories = categories.filter((c) => {
     // For income, show income categories; for expense, show expense categories
@@ -76,16 +77,24 @@ export function TransactionForm({ categories, initialData, onSubmit, onCancel }:
 
       <View style={styles.typeSelector}>
         <TouchableOpacity
-          style={[styles.typeButton, type === 'income' && styles.typeButtonActive]}
+          style={[
+            styles.typeButton,
+            { borderColor },
+            type === 'income' && { borderColor: theme.primary, backgroundColor: `${theme.primary}22` },
+          ]}
           onPress={() => setType('income')}>
-          <ThemedText style={[styles.typeButtonText, type === 'income' && styles.typeButtonTextActive]}>
+          <ThemedText style={[styles.typeButtonText, type === 'income' && { color: theme.primary, fontWeight: '700' }]}>
             Income
           </ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.typeButton, type === 'expense' && styles.typeButtonActive]}
+          style={[
+            styles.typeButton,
+            { borderColor },
+            type === 'expense' && { borderColor: theme.primary, backgroundColor: `${theme.primary}22` },
+          ]}
           onPress={() => setType('expense')}>
-          <ThemedText style={[styles.typeButtonText, type === 'expense' && styles.typeButtonTextActive]}>
+          <ThemedText style={[styles.typeButtonText, type === 'expense' && { color: theme.primary, fontWeight: '700' }]}>
             Expense
           </ThemedText>
         </TouchableOpacity>
@@ -119,7 +128,14 @@ export function TransactionForm({ categories, initialData, onSubmit, onCancel }:
           {filteredCategories.map((category) => (
             <TouchableOpacity
               key={category.id}
-              style={[styles.categoryButton, categoryId === category.id && styles.categoryButtonActive]}
+              style={[
+                styles.categoryButton,
+                { borderColor },
+                categoryId === category.id && {
+                  borderColor: theme.primary,
+                  backgroundColor: `${theme.primary}18`,
+                },
+              ]}
               onPress={() => setCategoryId(category.id)}>
               <View style={[styles.categoryIcon, { backgroundColor: `${category.color}20` }]}>
                 <IconSymbol name={category.icon} size={20} color={category.color} />
@@ -155,10 +171,14 @@ export function TransactionForm({ categories, initialData, onSubmit, onCancel }:
       </View>
 
       <View style={styles.buttonGroup}>
-        <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onCancel}>
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: theme.border }]}
+          onPress={onCancel}>
           <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.button, styles.submitButton]} onPress={handleSubmit}>
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: theme.primary }]}
+          onPress={handleSubmit}>
           <ThemedText style={styles.submitButtonText}>Save</ThemedText>
         </TouchableOpacity>
       </View>
@@ -189,16 +209,9 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
     alignItems: 'center',
   },
-  typeButtonActive: {
-    borderColor: '#0a7ea4',
-    backgroundColor: '#0a7ea420',
-  },
   typeButtonText: {
     fontSize: 16,
     fontWeight: '600',
-  },
-  typeButtonTextActive: {
-    color: '#0a7ea4',
   },
   inputGroup: {
     marginBottom: 20,
@@ -232,10 +245,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E0E0E0',
   },
-  categoryButtonActive: {
-    borderColor: '#0a7ea4',
-    backgroundColor: '#0a7ea420',
-  },
   categoryIcon: {
     width: 40,
     height: 40,
@@ -267,15 +276,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
-  cancelButton: {
-    backgroundColor: '#E0E0E0',
-  },
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
-  },
-  submitButton: {
-    backgroundColor: '#0a7ea4',
   },
   submitButtonText: {
     fontSize: 16,

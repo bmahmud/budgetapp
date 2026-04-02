@@ -3,7 +3,7 @@ import { GoalCard } from '@/components/goal-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
+import { Colors, FringePalette } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useBudgetStore } from '@/store/budget-store';
 import { useRouter } from 'expo-router';
@@ -11,14 +11,23 @@ import { useEffect, useState } from 'react';
 import { Alert, Dimensions, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const GOAL_COLORS = ['#00BCD4', '#9C27B0', '#FFC107', '#2196F3', '#E91E63', '#4CAF50', '#FF9800'];
+const GOAL_COLORS = [
+  FringePalette.teal,
+  FringePalette.purple,
+  FringePalette.purpleLight,
+  FringePalette.income,
+  '#F59E0B',
+  FringePalette.expense,
+  '#3B82F6',
+];
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 32 - 12) / 2; // Screen width minus padding and gap, divided by 2
 
 export default function GoalsScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
   const { goals, addGoal, isLoading, isInitialized, initialize } = useBudgetStore();
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState('');
@@ -27,9 +36,9 @@ export default function GoalsScreen() {
   const [targetDate, setTargetDate] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState(GOAL_COLORS[0]);
 
-  const textColor = Colors[colorScheme ?? 'light'].text;
-  const borderColor = colorScheme === 'dark' ? '#333' : '#E0E0E0';
-  const activeBorderColor = '#0a7ea4';
+  const textColor = theme.text;
+  const borderColor = theme.border;
+  const activeBorderColor = theme.primary;
 
   useEffect(() => {
     if (!isInitialized) {
@@ -101,11 +110,13 @@ export default function GoalsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
       {/* Header */}
       <ThemedView style={styles.header}>
         <ThemedText type="title">Financial Goals</ThemedText>
-        <TouchableOpacity style={styles.addButton} onPress={() => setShowModal(true)}>
+        <TouchableOpacity
+          style={[styles.addButton, { backgroundColor: theme.primary }]}
+          onPress={() => setShowModal(true)}>
           <ThemedText style={styles.addButtonText}>Add Goal</ThemedText>
         </TouchableOpacity>
       </ThemedView>
@@ -141,9 +152,9 @@ export default function GoalsScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
             style={styles.keyboardAvoidingView}>
-            <View style={styles.modalContent}>
+            <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
               {/* Modal Header */}
-              <View style={styles.modalHeader}>
+              <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
                 <View style={styles.modalHeaderLeft}>
                   <View style={[styles.modalIcon, { backgroundColor: `${selectedColor}20` }]}>
                     <IconSymbol name="target" size={24} color={selectedColor} />
@@ -164,7 +175,10 @@ export default function GoalsScreen() {
               <View style={styles.inputGroup}>
                 <ThemedText style={styles.label}>Goal Name</ThemedText>
                 <TextInput
-                  style={[styles.input, { borderColor: activeBorderColor, color: textColor, backgroundColor: '#1E1E1E' }]}
+                  style={[
+                    styles.input,
+                    { borderColor: activeBorderColor, color: textColor, backgroundColor: theme.background },
+                  ]}
                   placeholder="e.g., Emergency Fund, Vacation"
                   value={name}
                   onChangeText={setName}
@@ -180,7 +194,10 @@ export default function GoalsScreen() {
                 <ThemedText style={styles.label}>Target Amount</ThemedText>
                 <View style={styles.amountContainer}>
                   <TextInput
-                    style={[styles.amountInput, { borderColor: activeBorderColor, color: textColor }]}
+                    style={[
+                      styles.amountInput,
+                      { borderColor: activeBorderColor, color: textColor, backgroundColor: theme.background },
+                    ]}
                     value={`$ ${parseFloat(targetAmount || '0').toLocaleString()}`}
                     onChangeText={(text) => {
                       const num = text.replace(/[^0-9]/g, '');
@@ -191,12 +208,12 @@ export default function GoalsScreen() {
                   />
                   <View style={styles.amountControls}>
                     <TouchableOpacity
-                      style={styles.amountButton}
+                      style={[styles.amountButton, { backgroundColor: theme.border }]}
                       onPress={() => handleIncrement('target')}>
                       <IconSymbol name="chevron.up" size={16} color={textColor} />
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={styles.amountButton}
+                      style={[styles.amountButton, { backgroundColor: theme.border }]}
                       onPress={() => handleDecrement('target')}>
                       <IconSymbol name="chevron.down" size={16} color={textColor} />
                     </TouchableOpacity>
@@ -209,7 +226,10 @@ export default function GoalsScreen() {
                 <ThemedText style={styles.label}>Already Saved (optional)</ThemedText>
                 <View style={styles.amountContainer}>
                   <TextInput
-                    style={[styles.amountInput, { borderColor: activeBorderColor, color: textColor }]}
+                    style={[
+                      styles.amountInput,
+                      { borderColor: activeBorderColor, color: textColor, backgroundColor: theme.background },
+                    ]}
                     value={`$ ${parseFloat(alreadySaved || '0').toLocaleString()}`}
                     onChangeText={(text) => {
                       const num = text.replace(/[^0-9]/g, '');
@@ -220,12 +240,12 @@ export default function GoalsScreen() {
                   />
                   <View style={styles.amountControls}>
                     <TouchableOpacity
-                      style={styles.amountButton}
+                      style={[styles.amountButton, { backgroundColor: theme.border }]}
                       onPress={() => handleIncrement('saved')}>
                       <IconSymbol name="chevron.up" size={16} color={textColor} />
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={styles.amountButton}
+                      style={[styles.amountButton, { backgroundColor: theme.border }]}
                       onPress={() => handleDecrement('saved')}>
                       <IconSymbol name="chevron.down" size={16} color={textColor} />
                     </TouchableOpacity>
@@ -254,7 +274,7 @@ export default function GoalsScreen() {
                       style={[
                         styles.colorSwatch,
                         { backgroundColor: color },
-                        selectedColor === color && styles.colorSwatchSelected,
+                        selectedColor === color && [styles.colorSwatchSelected, { borderColor: theme.primary }],
                       ]}
                       onPress={() => setSelectedColor(color)}>
                       {selectedColor === color && (
@@ -267,11 +287,15 @@ export default function GoalsScreen() {
               </ScrollView>
 
               {/* Action Buttons */}
-              <View style={styles.modalButtons}>
-                <TouchableOpacity style={[styles.modalButton, styles.cancelButton]} onPress={handleCancel}>
+              <View style={[styles.modalButtons, { borderTopColor: theme.border }]}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton, { backgroundColor: theme.border }]}
+                  onPress={handleCancel}>
                   <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.modalButton, styles.createButton]} onPress={handleCreateGoal}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.createButton, { backgroundColor: theme.primary }]}
+                  onPress={handleCreateGoal}>
                   <ThemedText style={styles.createButtonText}>Create Goal</ThemedText>
                 </TouchableOpacity>
               </View>
@@ -296,8 +320,7 @@ const styles = StyleSheet.create({
   addButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#0a7ea4',
+    borderRadius: 10,
   },
   addButtonText: {
     color: '#fff',
@@ -348,7 +371,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#1E1E1E',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '90%',
@@ -361,7 +383,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
   },
   modalHeaderLeft: {
     flexDirection: 'row',
@@ -396,10 +417,9 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 10,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#1E1E1E',
   },
   amountContainer: {
     flexDirection: 'row',
@@ -409,10 +429,9 @@ const styles = StyleSheet.create({
   amountInput: {
     flex: 1,
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 10,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#1E1E1E',
   },
   amountControls: {
     flexDirection: 'column',
@@ -423,7 +442,6 @@ const styles = StyleSheet.create({
     height: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#333',
     borderRadius: 4,
   },
   colorGrid: {
@@ -441,14 +459,13 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   colorSwatchSelected: {
-    borderColor: '#0a7ea4',
+    borderWidth: 3,
   },
   modalButtons: {
     flexDirection: 'row',
     gap: 12,
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#333',
   },
   modalButton: {
     flex: 1,
@@ -456,17 +473,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
-  cancelButton: {
-    backgroundColor: '#333',
-  },
+  cancelButton: {},
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
   },
-  createButton: {
-    backgroundColor: '#0a7ea4',
-  },
+  createButton: {},
   createButtonText: {
     fontSize: 16,
     fontWeight: '600',

@@ -36,7 +36,6 @@ const MAPPING: IconMapping = {
   // Category icons
   'briefcase.fill': 'work',
   'laptopcomputer': 'laptop',
-  'chart.line.uptrend.xyaxis': 'show-chart',
   'fork.knife': 'restaurant',
   'car.fill': 'directions-car',
   'tv.fill': 'tv',

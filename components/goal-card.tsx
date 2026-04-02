@@ -2,8 +2,10 @@ import { StyleSheet, TouchableOpacity, View, Dimensions } from 'react-native';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 import { IconSymbol } from './ui/icon-symbol';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Goal } from '@/types';
-import { format, isPast, parseISO, differenceInDays } from 'date-fns';
+import { isPast, parseISO, differenceInDays } from 'date-fns';
 
 const GOAL_COLORS = ['#00BCD4', '#9C27B0', '#FFC107', '#2196F3', '#E91E63', '#4CAF50', '#FF9800'];
 const { width } = Dimensions.get('window');
@@ -15,6 +17,8 @@ interface GoalCardProps {
 }
 
 export function GoalCard({ goal, onPress }: GoalCardProps) {
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
   const progress = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
   const isCompleted = goal.currentAmount >= goal.targetAmount;
   const goalColor = goal.color || GOAL_COLORS[0];
@@ -37,7 +41,7 @@ export function GoalCard({ goal, onPress }: GoalCardProps) {
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={styles.cardContainer}>
-      <ThemedView style={styles.card}>
+      <ThemedView style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
         {/* Colored accent bar on the left */}
         <View style={[styles.accentBar, { backgroundColor: goalColor }]} />
         
@@ -71,7 +75,7 @@ export function GoalCard({ goal, onPress }: GoalCardProps) {
 
           {/* Progress bar */}
           <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
+            <View style={[styles.progressBar, { backgroundColor: theme.border }]}>
               <View style={[styles.progressFill, { width: `${Math.min(progress, 100)}%`, backgroundColor: goalColor }]} />
             </View>
           </View>
@@ -91,11 +95,9 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
   },
   card: {
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: 'hidden',
-    backgroundColor: '#1E1E1E',
     borderWidth: 1,
-    borderColor: '#333',
   },
   accentBar: {
     position: 'absolute',
@@ -151,7 +153,6 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 8,
-    backgroundColor: '#333',
     borderRadius: 4,
     overflow: 'hidden',
   },
