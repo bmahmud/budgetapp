@@ -24,6 +24,14 @@ interface ResetParams {
   type?: string;
 }
 
+function getWebHashParams() {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return new URLSearchParams();
+  const rawHash = window.location.hash.startsWith('#')
+    ? window.location.hash.slice(1)
+    : window.location.hash;
+  return new URLSearchParams(rawHash);
+}
+
 export default function ResetPasswordScreen() {
   const router = useRouter();
   const { updatePassword } = useAuth();
@@ -34,15 +42,23 @@ export default function ResetPasswordScreen() {
   const [confirm, setConfirm] = useState('');
   const [isPreparingSession, setIsPreparingSession] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [isRecoveryReady, setIsRecoveryReady] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
 
     async function prepareRecoverySession() {
-      const tokenHash = typeof params.token_hash === 'string' ? params.token_hash : '';
-      const resetType = typeof params.type === 'string' ? params.type : '';
-      const accessToken = typeof params.access_token === 'string' ? params.access_token : '';
-      const refreshToken = typeof params.refresh_token === 'string' ? params.refresh_token : '';
+      const hashParams = getWebHashParams();
+
+      const tokenHashFromQuery = typeof params.token_hash === 'string' ? params.token_hash : '';
+      const resetTypeFromQuery = typeof params.type === 'string' ? params.type : '';
+      const accessTokenFromQuery = typeof params.access_token === 'string' ? params.access_token : '';
+      const refreshTokenFromQuery = typeof params.refresh_token === 'string' ? params.refresh_token : '';
+
+      const tokenHash = tokenHashFromQuery || hashParams.get('token_hash') || '';
+      const resetType = resetTypeFromQuery || hashParams.get('type') || '';
+      const accessToken = accessTokenFromQuery || hashParams.get('access_token') || '';
+      const refreshToken = refreshTokenFromQuery || hashParams.get('refresh_token') || '';
 
       if (tokenHash && resetType === 'recovery') {
         const { error } = await supabase.auth.verifyOtp({
@@ -51,6 +67,8 @@ export default function ResetPasswordScreen() {
         });
         if (error) {
           Alert.alert('Invalid reset link', error.message);
+        } else {
+          setIsRecoveryReady(true);
         }
       } else if (accessToken && refreshToken) {
         const { error } = await supabase.auth.setSession({
@@ -59,7 +77,14 @@ export default function ResetPasswordScreen() {
         });
         if (error) {
           Alert.alert('Invalid reset session', error.message);
+        } else {
+          setIsRecoveryReady(true);
         }
+      } else {
+        Alert.alert(
+          'Reset link invalid',
+          'This reset link is missing required tokens. Request a new password reset email and try again.',
+        );
       }
 
       if (isMounted) setIsPreparingSession(false);
@@ -72,6 +97,10 @@ export default function ResetPasswordScreen() {
   }, [params.access_token, params.refresh_token, params.token_hash, params.type]);
 
   async function handlePasswordUpdate() {
+    if (!isRecoveryReady) {
+      Alert.alert('Reset session missing', 'Open the latest reset link from your email and try again.');
+      return;
+    }
     if (!password) {
       Alert.alert('Missing password', 'Enter your new password.');
       return;
@@ -93,9 +122,12 @@ export default function ResetPasswordScreen() {
       return;
     }
 
-    Alert.alert('Password updated', 'You can now sign in with your new password.', [
-      { text: 'OK', onPress: () => router.replace('/(auth)/login') },
-    ]);
+    await supabase.auth.signOut();
+    Alert.alert(
+      'Password updated successfully',
+      'Your password was changed. Please sign in again with your new password.',
+      [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }],
+    );
   }
 
   return (
@@ -135,7 +167,7 @@ export default function ResetPasswordScreen() {
           <TouchableOpacity
             style={[styles.button, { backgroundColor: theme.primary, opacity: isPreparingSession ? 0.6 : 1 }]}
             onPress={handlePasswordUpdate}
-            disabled={submitting || isPreparingSession}
+            disabled={submitting || isPreparingSession || !isRecoveryReady}
             activeOpacity={0.85}>
             {submitting || isPreparingSession ? (
               <ActivityIndicator color="#fff" />

@@ -53,17 +53,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!session) return;
-
-    const createdAtMs = new Date(session.user.created_at).getTime();
-    const elapsedMs = Date.now() - createdAtMs;
-    const timeoutMs = Math.max(0, SESSION_TIMEOUT_MS - elapsedMs);
+    const expiresAtMs = (session.expires_at ?? 0) * 1000;
+    const timeoutMs = Math.max(0, Math.min(SESSION_TIMEOUT_MS, expiresAtMs - Date.now()));
 
     const timeoutId = setTimeout(() => {
       void supabase.auth.signOut();
     }, timeoutMs);
 
     return () => clearTimeout(timeoutId);
-  }, [session?.user?.id, session?.user?.created_at]);
+  }, [session?.user?.id, session?.expires_at]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
