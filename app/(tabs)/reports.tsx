@@ -91,28 +91,28 @@ export default function ReportsScreen() {
           style={[
             styles.periodButton,
             { borderColor: theme.border },
-            period === 'month' && [styles.periodButtonActive, { backgroundColor: theme.tint, borderColor: theme.tint }],
+            period === 'month' && [styles.periodButtonActive, { backgroundColor: `${theme.tint}14`, borderColor: theme.tint }],
           ]}
           onPress={() => setPeriod('month')}>
-          <ThemedText style={[styles.periodText, period === 'month' && styles.periodTextActive]}>Month</ThemedText>
+          <ThemedText style={[styles.periodText, { color: theme.text }, period === 'month' && [styles.periodTextActive, { color: theme.tint }]]}>Month</ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
           style={[
             styles.periodButton,
             { borderColor: theme.border },
-            period === 'year' && [styles.periodButtonActive, { backgroundColor: theme.tint, borderColor: theme.tint }],
+            period === 'year' && [styles.periodButtonActive, { backgroundColor: `${theme.tint}14`, borderColor: theme.tint }],
           ]}
           onPress={() => setPeriod('year')}>
-          <ThemedText style={[styles.periodText, period === 'year' && styles.periodTextActive]}>Year</ThemedText>
+          <ThemedText style={[styles.periodText, { color: theme.text }, period === 'year' && [styles.periodTextActive, { color: theme.tint }]]}>Year</ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
           style={[
             styles.periodButton,
             { borderColor: theme.border },
-            period === 'all' && [styles.periodButtonActive, { backgroundColor: theme.tint, borderColor: theme.tint }],
+            period === 'all' && [styles.periodButtonActive, { backgroundColor: `${theme.tint}14`, borderColor: theme.tint }],
           ]}
           onPress={() => setPeriod('all')}>
-          <ThemedText style={[styles.periodText, period === 'all' && styles.periodTextActive]}>All Time</ThemedText>
+          <ThemedText style={[styles.periodText, { color: theme.text }, period === 'all' && [styles.periodTextActive, { color: theme.tint }]]}>All Time</ThemedText>
         </TouchableOpacity>
       </View>
 
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   periodTextActive: {
-    color: '#fff',
+    color: FringePalette.purple,
   },
   scrollView: {
     flex: 1,

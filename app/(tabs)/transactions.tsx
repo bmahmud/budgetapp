@@ -53,28 +53,28 @@ export default function TransactionsScreen() {
           style={[
             styles.filterButton,
             { borderColor: theme.border },
-            filter === 'all' && [styles.filterButtonActive, { backgroundColor: theme.tint, borderColor: theme.tint }],
+            filter === 'all' && [styles.filterButtonActive, { backgroundColor: `${theme.tint}14`, borderColor: theme.tint }],
           ]}
           onPress={() => setFilter('all')}>
-          <ThemedText style={[styles.filterText, filter === 'all' && styles.filterTextActive]}>All</ThemedText>
+          <ThemedText style={[styles.filterText, { color: theme.text }, filter === 'all' && [styles.filterTextActive, { color: theme.tint }]]}>All</ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
           style={[
             styles.filterButton,
             { borderColor: theme.border },
-            filter === 'income' && [styles.filterButtonActive, { backgroundColor: theme.tint, borderColor: theme.tint }],
+            filter === 'income' && [styles.filterButtonActive, { backgroundColor: `${theme.tint}14`, borderColor: theme.tint }],
           ]}
           onPress={() => setFilter('income')}>
-          <ThemedText style={[styles.filterText, filter === 'income' && styles.filterTextActive]}>Income</ThemedText>
+          <ThemedText style={[styles.filterText, { color: theme.text }, filter === 'income' && [styles.filterTextActive, { color: theme.tint }]]}>Income</ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
           style={[
             styles.filterButton,
             { borderColor: theme.border },
-            filter === 'expense' && [styles.filterButtonActive, { backgroundColor: theme.tint, borderColor: theme.tint }],
+            filter === 'expense' && [styles.filterButtonActive, { backgroundColor: `${theme.tint}14`, borderColor: theme.tint }],
           ]}
           onPress={() => setFilter('expense')}>
-          <ThemedText style={[styles.filterText, filter === 'expense' && styles.filterTextActive]}>Expense</ThemedText>
+          <ThemedText style={[styles.filterText, { color: theme.text }, filter === 'expense' && [styles.filterTextActive, { color: theme.tint }]]}>Expense</ThemedText>
         </TouchableOpacity>
       </View>
 
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   filterTextActive: {
-    color: '#fff',
+    color: '#6D28D9',
   },
   listContent: {
     padding: 16,

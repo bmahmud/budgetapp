@@ -2,16 +2,20 @@ import { supabase } from '@/lib/supabase';
 import { useBudgetStore } from '@/store/budget-store';
 import type { Session } from '@supabase/supabase-js';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import * as Linking from 'expo-linking';
 
 interface AuthContextValue {
   session: Session | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
+  requestPasswordReset: (email: string) => Promise<{ error: Error | null }>;
+  updatePassword: (password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+const SESSION_TIMEOUT_MS = 60 * 60 * 1000;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -47,6 +51,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void hydrateFromRemote();
   }, [session?.user?.id, isLoading, hydrateFromRemote, resetLocalState]);
 
+  useEffect(() => {
+    if (!session) return;
+
+    const createdAtMs = new Date(session.user.created_at).getTime();
+    const elapsedMs = Date.now() - createdAtMs;
+    const timeoutMs = Math.max(0, SESSION_TIMEOUT_MS - elapsedMs);
+
+    const timeoutId = setTimeout(() => {
+      void supabase.auth.signOut();
+    }, timeoutMs);
+
+    return () => clearTimeout(timeoutId);
+  }, [session?.user?.id, session?.user?.created_at]);
+
   const signIn = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     return { error: error ? new Error(error.message) : null };
@@ -57,14 +75,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: error ? new Error(error.message) : null };
   }, []);
 
+  const requestPasswordReset = useCallback(async (email: string) => {
+    const redirectTo = Linking.createURL('/reset-password');
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
+    return { error: error ? new Error(error.message) : null };
+  }, []);
+
+  const updatePassword = useCallback(async (password: string) => {
+    const { error } = await supabase.auth.updateUser({ password });
+    return { error: error ? new Error(error.message) : null };
+  }, []);
+
   const signOut = useCallback(async () => {
     resetLocalState();
     await supabase.auth.signOut();
   }, [resetLocalState]);
 
   const value = useMemo(
-    () => ({ session, isLoading, signIn, signUp, signOut }),
-    [session, isLoading, signIn, signUp, signOut],
+    () => ({ session, isLoading, signIn, signUp, requestPasswordReset, updatePassword, signOut }),
+    [session, isLoading, signIn, signUp, requestPasswordReset, updatePassword, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -7,13 +7,15 @@ import { useBudgetStore } from '@/store/budget-store';
 import { format } from 'date-fns';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '@/contexts/auth-context';
 
 export default function HomeScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'light';
   const theme = Colors[colorScheme];
+  const { session } = useAuth();
   const {
     transactions,
     goals,
@@ -76,6 +78,10 @@ export default function HomeScreen() {
   const hasSavingsData = savingsRate !== 0 || lastMonthSavingsRate !== 0;
 
   const getCategoryById = (id: string) => categories.find((c) => c.id === id);
+  const user = session?.user;
+  const userName = (user?.user_metadata?.full_name as string | undefined) ?? user?.email ?? 'User';
+  const initials = userName.trim().charAt(0).toUpperCase() || 'U';
+  const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
 
   const cardSurface = [
     styles.summaryCard,
@@ -91,15 +97,31 @@ export default function HomeScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <ThemedView style={styles.header}>
-          <ThemedText type="title" style={styles.headerTitle}>
-            Fringe
-          </ThemedText>
-          <ThemedText style={[styles.appSubtitle, { color: theme.mutedText }]}>
-            Budgeting personal Mobile App
-          </ThemedText>
-          <ThemedText style={[styles.tagline, { color: theme.mutedText }]}>
-            Track. Plan. Save. Effortlessly.
-          </ThemedText>
+          <View style={styles.headerTopRow}>
+            <View style={styles.headerTextWrap}>
+              <ThemedText type="title" style={styles.headerTitle}>
+                Fringe
+              </ThemedText>
+              <ThemedText style={[styles.appSubtitle, { color: theme.mutedText }]}>
+                Budgeting personal Mobile App
+              </ThemedText>
+              <ThemedText style={[styles.tagline, { color: theme.mutedText }]}>
+                Track. Plan. Save. Effortlessly.
+              </ThemedText>
+            </View>
+            <TouchableOpacity
+              style={[styles.avatarButton, { borderColor: theme.border }]}
+              activeOpacity={0.8}
+              onPress={() => router.push('/(tabs)/settings')}
+              accessibilityRole="button"
+              accessibilityLabel="Open profile settings">
+              {avatarUrl ? (
+                <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+              ) : (
+                <ThemedText style={[styles.avatarInitial, { color: theme.tint }]}>{initials}</ThemedText>
+              )}
+            </TouchableOpacity>
+          </View>
         </ThemedView>
 
         {/* Summary Cards Row */}
@@ -227,7 +249,7 @@ export default function HomeScreen() {
           <ThemedText lightColor="#FFFFFF" darkColor="#F8FAFC" style={styles.smartTipText}>
             {metrics.totalIncome > 0 ? (
               <>
-                You're spending {((metrics.totalExpenses / metrics.totalIncome) * 100).toFixed(0)}% of your income.
+                You are spending {((metrics.totalExpenses / metrics.totalIncome) * 100).toFixed(0)}% of your income.
                 Financial experts recommend keeping expenses under 70% for healthy savings.
               </>
             ) : (
@@ -311,9 +333,21 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 20,
   },
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  headerTextWrap: {
+    flex: 1,
+  },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 34,
+    fontWeight: '900',
+    color: FringePalette.purple,
+    letterSpacing: 0.4,
+    fontStyle: 'italic',
   },
   appSubtitle: {
     fontSize: 12,
@@ -325,6 +359,24 @@ const styles = StyleSheet.create({
     fontSize: 15,
     marginTop: 8,
     fontWeight: '500',
+  },
+  avatarButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    backgroundColor: '#F8FAFC',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarInitial: {
+    fontSize: 18,
+    fontWeight: '700',
   },
   summaryRow: {
     flexDirection: 'row',
