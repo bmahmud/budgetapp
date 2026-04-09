@@ -21,6 +21,7 @@ function AuthStack() {
 
     const first = segments[0];
     const atEntry = pathname === '/' || pathname === '';
+    const isPasswordRecoveryRoute = pathname.includes('reset-password') || pathname.includes('forgot-password');
 
     if (!session) {
       const isPublic = first === '(auth)' || atEntry;
@@ -30,7 +31,7 @@ function AuthStack() {
       return;
     }
 
-    if (first === '(auth)') {
+    if (first === '(auth)' && !isPasswordRecoveryRoute) {
       router.replace('/(tabs)');
     }
   }, [session, isLoading, segments, pathname, router]);
