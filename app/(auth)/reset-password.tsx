@@ -7,7 +7,6 @@ import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -43,11 +42,13 @@ export default function ResetPasswordScreen() {
   const [isPreparingSession, setIsPreparingSession] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [isRecoveryReady, setIsRecoveryReady] = useState(false);
+  const [formMessage, setFormMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
     async function prepareRecoverySession() {
+      setFormMessage(null);
       const hashParams = getWebHashParams();
 
       const tokenHashFromQuery = typeof params.token_hash === 'string' ? params.token_hash : '';
@@ -66,9 +67,10 @@ export default function ResetPasswordScreen() {
           type: 'recovery',
         });
         if (error) {
-          Alert.alert('Invalid reset link', error.message);
+          setFormMessage(`Invalid reset link: ${error.message}`);
         } else {
           setIsRecoveryReady(true);
+          setFormMessage('Reset link verified. Enter your new password.');
         }
       } else if (accessToken && refreshToken) {
         const { error } = await supabase.auth.setSession({
@@ -76,15 +78,13 @@ export default function ResetPasswordScreen() {
           refresh_token: refreshToken,
         });
         if (error) {
-          Alert.alert('Invalid reset session', error.message);
+          setFormMessage(`Invalid reset session: ${error.message}`);
         } else {
           setIsRecoveryReady(true);
+          setFormMessage('Reset session ready. Enter your new password.');
         }
       } else {
-        Alert.alert(
-          'Reset link invalid',
-          'This reset link is missing required tokens. Request a new password reset email and try again.',
-        );
+        setFormMessage('Reset link is missing required tokens. Request a new password reset email and try again.');
       }
 
       if (isMounted) setIsPreparingSession(false);
@@ -97,20 +97,21 @@ export default function ResetPasswordScreen() {
   }, [params.access_token, params.refresh_token, params.token_hash, params.type]);
 
   async function handlePasswordUpdate() {
+    setFormMessage(null);
     if (!isRecoveryReady) {
-      Alert.alert('Reset session missing', 'Open the latest reset link from your email and try again.');
+      setFormMessage('Reset session missing. Open the latest reset link from your email and try again.');
       return;
     }
     if (!password) {
-      Alert.alert('Missing password', 'Enter your new password.');
+      setFormMessage('Enter your new password.');
       return;
     }
     if (password.length < 6) {
-      Alert.alert('Password too short', 'Use at least 6 characters.');
+      setFormMessage('Password too short. Use at least 6 characters.');
       return;
     }
     if (password !== confirm) {
-      Alert.alert('Mismatch', 'Passwords do not match.');
+      setFormMessage('Passwords do not match.');
       return;
     }
 
@@ -118,16 +119,13 @@ export default function ResetPasswordScreen() {
     const { error } = await updatePassword(password);
     setSubmitting(false);
     if (error) {
-      Alert.alert('Update failed', error.message);
+      setFormMessage(`Update failed: ${error.message}`);
       return;
     }
 
     await supabase.auth.signOut();
-    Alert.alert(
-      'Password updated successfully',
-      'Your password was changed. Please sign in again with your new password.',
-      [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }],
-    );
+    setFormMessage('Password updated successfully. Redirecting to sign in...');
+    router.replace('/(auth)/login');
   }
 
   return (
@@ -167,7 +165,7 @@ export default function ResetPasswordScreen() {
           <TouchableOpacity
             style={[styles.button, { backgroundColor: theme.primary, opacity: isPreparingSession ? 0.6 : 1 }]}
             onPress={handlePasswordUpdate}
-            disabled={submitting || isPreparingSession || !isRecoveryReady}
+            disabled={submitting || isPreparingSession}
             activeOpacity={0.85}>
             {submitting || isPreparingSession ? (
               <ActivityIndicator color="#fff" />
@@ -175,6 +173,10 @@ export default function ResetPasswordScreen() {
               <ThemedText style={styles.buttonText}>Update password</ThemedText>
             )}
           </TouchableOpacity>
+
+          {formMessage ? (
+            <ThemedText style={[styles.formMessage, { color: theme.mutedText }]}>{formMessage}</ThemedText>
+          ) : null}
 
           <Link href="/(auth)/login" asChild>
             <TouchableOpacity style={styles.linkWrap}>
@@ -212,5 +214,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  formMessage: { marginTop: 12, textAlign: 'center', fontSize: 13 },
   linkWrap: { marginTop: 24, alignItems: 'center' },
 });

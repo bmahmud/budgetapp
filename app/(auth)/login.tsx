@@ -7,7 +7,7 @@ import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -25,26 +25,28 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [formMessage, setFormMessage] = useState<string | null>(null);
 
   async function handleSignIn() {
+    setFormMessage(null);
     if (!isSupabaseConfigured) {
-      Alert.alert(
-        'Supabase not configured',
-        'Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to a .env file in the project root, then restart Expo.',
+      setFormMessage(
+        'Supabase is not configured. Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to .env and restart Expo.',
       );
       return;
     }
     if (!email.trim() || !password) {
-      Alert.alert('Missing fields', 'Enter email and password.');
+      setFormMessage('Enter email and password.');
       return;
     }
     setSubmitting(true);
     const { error } = await signIn(email, password);
     setSubmitting(false);
     if (error) {
-      Alert.alert('Sign in failed', error.message);
+      setFormMessage(error.message);
       return;
     }
+    setFormMessage('Signed in successfully. Redirecting...');
     router.replace('/(tabs)');
   }
 
@@ -54,9 +56,7 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.flex}>
         <View style={styles.inner}>
-          <ThemedText type="title" style={styles.title}>
-            Fringe
-          </ThemedText>
+          <Image source={require('../../assets/fringe-logo.png')} style={styles.logo} resizeMode="contain" />
           <ThemedText style={[styles.subtitle, { color: theme.mutedText }]}>
             Sign in to sync your budget across devices.
           </ThemedText>
@@ -98,6 +98,10 @@ export default function LoginScreen() {
             )}
           </TouchableOpacity>
 
+          {formMessage ? (
+            <ThemedText style={[styles.formMessage, { color: theme.mutedText }]}>{formMessage}</ThemedText>
+          ) : null}
+
           <Link href="/(auth)/forgot-password" asChild>
             <TouchableOpacity style={styles.forgotWrap}>
               <ThemedText style={{ color: FringePalette.purple }}>Forgot password?</ThemedText>
@@ -130,13 +134,10 @@ const styles = StyleSheet.create({
     paddingTop: 48,
     justifyContent: 'center',
   },
-  title: {
-    marginBottom: 8,
-    color: FringePalette.purple,
-    fontSize: 44,
-    fontWeight: '900',
-    letterSpacing: 0.4,
-    fontStyle: 'italic',
+  logo: {
+    width: '100%',
+    height: 130,
+    marginBottom: 12,
   },
   subtitle: { marginBottom: 32, fontSize: 15 },
   input: {
@@ -154,6 +155,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  formMessage: { marginTop: 12, textAlign: 'center', fontSize: 13 },
   forgotWrap: { marginTop: 16, alignItems: 'center' },
   linkWrap: { marginTop: 24, alignItems: 'center' },
   hint: { marginTop: 24, fontSize: 12, textAlign: 'center' },
