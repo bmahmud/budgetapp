@@ -99,9 +99,7 @@ export default function HomeScreen() {
         <ThemedView style={styles.header}>
           <View style={styles.headerTopRow}>
             <View style={styles.headerTextWrap}>
-              <ThemedText type="title" style={styles.headerTitle}>
-                Fringe
-              </ThemedText>
+              <Image source={require('../../assets/images/logo.png')} style={styles.headerLogo} resizeMode="contain" />
               <ThemedText style={[styles.appSubtitle, { color: theme.mutedText }]}>
                 Budgeting personal Mobile App
               </ThemedText>
@@ -342,12 +340,9 @@ const styles = StyleSheet.create({
   headerTextWrap: {
     flex: 1,
   },
-  headerTitle: {
-    fontSize: 34,
-    fontWeight: '900',
-    color: FringePalette.purple,
-    letterSpacing: 0.4,
-    fontStyle: 'italic',
+  headerLogo: {
+    width: 180,
+    height: 56,
   },
   appSubtitle: {
     fontSize: 12,

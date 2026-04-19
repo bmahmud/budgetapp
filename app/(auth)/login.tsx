@@ -56,7 +56,7 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.flex}>
         <View style={styles.inner}>
-          <Image source={require('../../assets/fringe-logo-transparent.png')} style={styles.logo} resizeMode="contain" />
+          <Image source={require('../../assets/images/logo.png')} style={styles.logo} resizeMode="contain" />
           <ThemedText style={[styles.subtitle, { color: theme.mutedText }]}>
             Sign in to sync your budget across devices.
           </ThemedText>
@@ -70,6 +70,7 @@ export default function LoginScreen() {
             placeholderTextColor={theme.mutedText}
             autoCapitalize="none"
             autoCorrect={false}
+            autoComplete="off"
             keyboardType="email-address"
             value={email}
             onChangeText={setEmail}
@@ -82,6 +83,8 @@ export default function LoginScreen() {
             placeholder="Password"
             placeholderTextColor={theme.mutedText}
             secureTextEntry
+            autoComplete="off"
+            textContentType="none"
             value={password}
             onChangeText={setPassword}
           />
@@ -136,7 +139,7 @@ const styles = StyleSheet.create({
   },
   logo: {
     width: '100%',
-    height: 130,
+    height: 120,
     marginBottom: 12,
     backgroundColor: 'transparent',
   },

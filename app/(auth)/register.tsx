@@ -83,6 +83,7 @@ export default function RegisterScreen() {
             placeholderTextColor={theme.mutedText}
             autoCapitalize="none"
             autoCorrect={false}
+            autoComplete="off"
             keyboardType="email-address"
             value={email}
             onChangeText={setEmail}
@@ -95,6 +96,8 @@ export default function RegisterScreen() {
             placeholder="Password (min 6 characters)"
             placeholderTextColor={theme.mutedText}
             secureTextEntry
+            autoComplete="off"
+            textContentType="none"
             value={password}
             onChangeText={setPassword}
           />
@@ -106,6 +109,8 @@ export default function RegisterScreen() {
             placeholder="Confirm password"
             placeholderTextColor={theme.mutedText}
             secureTextEntry
+            autoComplete="off"
+            textContentType="none"
             value={confirm}
             onChangeText={setConfirm}
           />

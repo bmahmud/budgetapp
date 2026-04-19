@@ -147,6 +147,8 @@ export default function ResetPasswordScreen() {
             placeholder="New password (min 6 characters)"
             placeholderTextColor={theme.mutedText}
             secureTextEntry
+            autoComplete="off"
+            textContentType="none"
             value={password}
             onChangeText={setPassword}
           />
@@ -158,6 +160,8 @@ export default function ResetPasswordScreen() {
             placeholder="Confirm new password"
             placeholderTextColor={theme.mutedText}
             secureTextEntry
+            autoComplete="off"
+            textContentType="none"
             value={confirm}
             onChangeText={setConfirm}
           />
