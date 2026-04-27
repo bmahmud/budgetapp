@@ -5,17 +5,20 @@ import { Colors, FringePalette } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useBudgetStore } from '@/store/budget-store';
 import { format } from 'date-fns';
-import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/auth-context';
+import { getProfilePreferences } from '@/lib/profile-preferences';
 
 export default function HomeScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'light';
   const theme = Colors[colorScheme];
   const { session } = useAuth();
+  const [profileAvatarUri, setProfileAvatarUri] = useState<string | null>(null);
+  const [profileInitials, setProfileInitials] = useState('');
   const {
     transactions,
     goals,
@@ -28,11 +31,27 @@ export default function HomeScreen() {
     getDaysUntilDeadline,
   } = useBudgetStore();
 
+  const loadProfilePreferences = useCallback(async () => {
+    const preferences = await getProfilePreferences();
+    setProfileAvatarUri(preferences.avatarUri);
+    setProfileInitials(preferences.initials);
+  }, []);
+
   useEffect(() => {
     if (!isInitialized) {
       initialize();
     }
   }, [isInitialized, initialize]);
+
+  useEffect(() => {
+    void loadProfilePreferences();
+  }, [loadProfilePreferences]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadProfilePreferences();
+    }, [loadProfilePreferences]),
+  );
 
   // Use 'all' to show all-time totals on dashboard
   const metrics = getSummaryMetrics('all');
@@ -80,8 +99,9 @@ export default function HomeScreen() {
   const getCategoryById = (id: string) => categories.find((c) => c.id === id);
   const user = session?.user;
   const userName = (user?.user_metadata?.full_name as string | undefined) ?? user?.email ?? 'User';
-  const initials = userName.trim().charAt(0).toUpperCase() || 'U';
+  const initials = profileInitials || userName.trim().charAt(0).toUpperCase() || 'U';
   const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
+  const avatarSourceUri = profileAvatarUri || avatarUrl || null;
 
   const cardSurface = [
     styles.summaryCard,
@@ -113,8 +133,8 @@ export default function HomeScreen() {
               onPress={() => router.push('/(tabs)/settings')}
               accessibilityRole="button"
               accessibilityLabel="Open profile settings">
-              {avatarUrl ? (
-                <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+              {avatarSourceUri ? (
+                <Image source={{ uri: avatarSourceUri }} style={styles.avatarImage} />
               ) : (
                 <ThemedText style={[styles.avatarInitial, { color: theme.tint }]}>{initials}</ThemedText>
               )}

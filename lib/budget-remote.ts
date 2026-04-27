@@ -88,6 +88,57 @@ export async function seedCategoriesForUser(userId: string): Promise<Category[]>
   return (data ?? []).map(mapCategory);
 }
 
+async function reconcileExistingDefaultCategories(
+  userId: string,
+  categories: Category[],
+): Promise<Category[]> {
+  const hasMortgageRent = categories.some((c) => c.name === 'Mortgage/Rent');
+  const hasCarPayment = categories.some((c) => c.name === 'Car Payment');
+  const freelanceCategory = categories.find((c) => c.name === 'Freelance');
+
+  let nextCategories = [...categories];
+
+  if (!hasMortgageRent && freelanceCategory) {
+    const { data, error } = await supabase
+      .from('categories')
+      .update({
+        name: 'Mortgage/Rent',
+        icon: 'house.fill',
+        color: '#2196F3',
+      })
+      .eq('id', freelanceCategory.id)
+      .eq('user_id', userId)
+      .select('*')
+      .single();
+    if (error) throw error;
+    if (data) {
+      const updatedCategory = mapCategory(data);
+      nextCategories = nextCategories.map((c) => (c.id === updatedCategory.id ? updatedCategory : c));
+    }
+  }
+
+  const latestHasCarPayment = nextCategories.some((c) => c.name === 'Car Payment');
+  if (!hasCarPayment && !latestHasCarPayment) {
+    const { data, error } = await supabase
+      .from('categories')
+      .insert({
+        user_id: userId,
+        name: 'Car Payment',
+        icon: 'car.fill',
+        color: '#0EA5E9',
+        is_default: true,
+      })
+      .select('*')
+      .single();
+    if (error) throw error;
+    if (data) {
+      nextCategories = [...nextCategories, mapCategory(data)];
+    }
+  }
+
+  return nextCategories;
+}
+
 export async function fetchAllForUser(userId: string): Promise<{
   categories: Category[];
   transactions: Transaction[];
@@ -106,6 +157,8 @@ export async function fetchAllForUser(userId: string): Promise<{
   let categories = (catsRes.data ?? []).map(mapCategory);
   if (categories.length === 0) {
     categories = await seedCategoriesForUser(userId);
+  } else {
+    categories = await reconcileExistingDefaultCategories(userId, categories);
   }
 
   return {

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { StyleSheet, ScrollView, TouchableOpacity, Alert, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { StyleSheet, ScrollView, TouchableOpacity, Alert, View, Image, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
@@ -8,18 +8,83 @@ import { Colors } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { useBudgetStore } from '@/store/budget-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import * as ImagePicker from 'expo-image-picker';
+import { getProfilePreferences, setProfilePreferences } from '@/lib/profile-preferences';
 
 export default function SettingsScreen() {
   const { session, signOut } = useAuth();
   const { isInitialized, initialize, resetAllData } = useBudgetStore();
   const colorScheme = useColorScheme() ?? 'light';
   const theme = Colors[colorScheme];
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [initials, setInitials] = useState('');
+  const [profileMessage, setProfileMessage] = useState<string | null>(null);
+  const bannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!isInitialized) {
       initialize();
     }
   }, [isInitialized, initialize]);
+
+  useEffect(() => {
+    void (async () => {
+      const preferences = await getProfilePreferences();
+      setAvatarUri(preferences.avatarUri);
+      setInitials(preferences.initials);
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!profileMessage) return;
+    if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
+    bannerTimerRef.current = setTimeout(() => {
+      setProfileMessage(null);
+    }, 2200);
+
+    return () => {
+      if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
+    };
+  }, [profileMessage]);
+
+  const saveProfilePreferences = async (nextAvatarUri: string | null, nextInitials: string) => {
+    await setProfilePreferences({
+      avatarUri: nextAvatarUri,
+      initials: nextInitials.trim().slice(0, 2).toUpperCase(),
+    });
+  };
+
+  const handlePickProfileImage = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissionResult.granted) {
+      Alert.alert('Permission needed', 'Please allow photo library access to upload your profile picture.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (result.canceled || !result.assets[0]?.uri) return;
+    const selectedUri = result.assets[0].uri;
+    setAvatarUri(selectedUri);
+    await saveProfilePreferences(selectedUri, initials);
+    setProfileMessage('Profile picture updated.');
+  };
+
+  const handleInitialsSave = async () => {
+    await saveProfilePreferences(avatarUri, initials);
+    setProfileMessage('Initials saved.');
+  };
+
+  const handleRemovePhoto = async () => {
+    setAvatarUri(null);
+    await saveProfilePreferences(null, initials);
+    setProfileMessage('Profile picture removed.');
+  };
 
   const handleReset = () => {
     Alert.alert(
@@ -52,6 +117,77 @@ export default function SettingsScreen() {
       </ThemedView>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+        {profileMessage ? (
+          <ThemedView
+            style={[
+              styles.banner,
+              {
+                backgroundColor: `${theme.primary}14`,
+                borderColor: `${theme.primary}40`,
+              },
+            ]}>
+            <ThemedText style={{ color: theme.primary, fontWeight: '600' }}>{profileMessage}</ThemedText>
+          </ThemedView>
+        ) : null}
+
+        <ThemedView style={[styles.sectionCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>
+            Profile
+          </ThemedText>
+          <View style={styles.profileRow}>
+            <View style={[styles.avatarPreview, { borderColor: theme.border }]}>
+              {avatarUri ? (
+                <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+              ) : (
+                <ThemedText style={[styles.avatarFallback, { color: theme.tint }]}>
+                  {(initials.trim().slice(0, 2).toUpperCase() || 'U')}
+                </ThemedText>
+              )}
+            </View>
+            <View style={styles.profileActions}>
+              <TouchableOpacity
+                style={[styles.signOutRow, { borderColor: theme.border }]}
+                onPress={() => void handlePickProfileImage()}
+                activeOpacity={0.85}>
+                <ThemedText style={{ color: theme.primary, fontWeight: '600' }}>Upload Picture</ThemedText>
+              </TouchableOpacity>
+              {avatarUri ? (
+                <TouchableOpacity
+                  style={[styles.signOutRow, { borderColor: theme.border }]}
+                  onPress={() => void handleRemovePhoto()}
+                  activeOpacity={0.85}>
+                  <ThemedText style={{ color: theme.mutedText, fontWeight: '600' }}>Remove Picture</ThemedText>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          </View>
+          <ThemedText style={[styles.infoLabel, { marginTop: 16 }]}>Initials (optional)</ThemedText>
+          <TextInput
+            style={[
+              styles.initialsInput,
+              { color: theme.text, borderColor: theme.border, backgroundColor: theme.background },
+            ]}
+            value={initials}
+            onChangeText={(value) => {
+              setInitials(value);
+              setProfileMessage(null);
+            }}
+            autoCapitalize="characters"
+            maxLength={2}
+            placeholder="e.g. BM"
+            placeholderTextColor={theme.mutedText}
+          />
+          <ThemedText style={[styles.initialsPreviewText, { color: theme.mutedText }]}>
+            Live preview: {(initials.trim().slice(0, 2).toUpperCase() || 'U')}
+          </ThemedText>
+          <TouchableOpacity
+            style={[styles.signOutRow, { borderColor: theme.border }]}
+            onPress={() => void handleInitialsSave()}
+            activeOpacity={0.85}>
+            <ThemedText style={{ color: theme.primary, fontWeight: '600' }}>Save Initials</ThemedText>
+          </TouchableOpacity>
+        </ThemedView>
+
         <ThemedView style={[styles.sectionCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
             Account
@@ -112,10 +248,6 @@ export default function SettingsScreen() {
             Fringe helps you track your income and expenses, set financial goals, and gain insights into
             your spending habits.
           </ThemedText>
-          <ThemedText style={[styles.aboutText, { color: theme.mutedText }]}>
-            Your budget is stored in your Supabase project and tied to your account. Enable Row Level Security
-            policies as in the included schema so only you can read and write your rows.
-          </ThemedText>
         </ThemedView>
       </ScrollView>
     </SafeAreaView>
@@ -135,6 +267,13 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
     paddingBottom: 32,
+  },
+  banner: {
+    marginBottom: 12,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   sectionCard: {
     marginBottom: 16,
@@ -187,6 +326,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 12,
+  },
+  profileRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+  },
+  avatarPreview: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarFallback: {
+    fontSize: 26,
+    fontWeight: '700',
+  },
+  profileActions: {
+    flex: 1,
+    gap: 8,
+  },
+  initialsInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    marginTop: 8,
+    marginBottom: 6,
+  },
+  initialsPreviewText: {
+    fontSize: 12,
+    marginBottom: 10,
   },
 });
 

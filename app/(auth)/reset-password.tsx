@@ -43,6 +43,8 @@ export default function ResetPasswordScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [isRecoveryReady, setIsRecoveryReady] = useState(false);
   const [formMessage, setFormMessage] = useState<string | null>(null);
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasSpecialCharacter = /[^A-Za-z0-9]/.test(password);
 
   useEffect(() => {
     let isMounted = true;
@@ -108,6 +110,10 @@ export default function ResetPasswordScreen() {
     }
     if (password.length < 6) {
       setFormMessage('Password too short. Use at least 6 characters.');
+      return;
+    }
+    if (!hasUppercase || !hasSpecialCharacter) {
+      setFormMessage('Password must include at least one uppercase letter and one special character.');
       return;
     }
     if (password !== confirm) {

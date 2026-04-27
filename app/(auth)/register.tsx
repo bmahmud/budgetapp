@@ -27,6 +27,9 @@ export default function RegisterScreen() {
   const [confirm, setConfirm] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasSpecialCharacter = /[^A-Za-z0-9]/.test(password);
+
   async function handleRegister() {
     if (!isSupabaseConfigured) {
       Alert.alert(
@@ -41,6 +44,13 @@ export default function RegisterScreen() {
     }
     if (password.length < 6) {
       Alert.alert('Password too short', 'Use at least 6 characters.');
+      return;
+    }
+    if (!hasUppercase || !hasSpecialCharacter) {
+      Alert.alert(
+        'Weak password',
+        'Password must include at least one uppercase letter and one special character.',
+      );
       return;
     }
     if (password !== confirm) {
@@ -70,9 +80,7 @@ export default function RegisterScreen() {
           <ThemedText type="title" style={styles.title}>
             Create account
           </ThemedText>
-          <ThemedText style={[styles.subtitle, { color: theme.mutedText }]}>
-            Your data is stored in your Supabase project with row-level security.
-          </ThemedText>
+          <ThemedText style={[styles.subtitle, { color: theme.mutedText }]}>Create your Fringe account.</ThemedText>
 
           <TextInput
             style={[
@@ -93,7 +101,7 @@ export default function RegisterScreen() {
               styles.input,
               { color: theme.text, borderColor: theme.border, backgroundColor: theme.card },
             ]}
-            placeholder="Password (min 6 characters)"
+            placeholder="Password (min 6, 1 uppercase, 1 special)"
             placeholderTextColor={theme.mutedText}
             secureTextEntry
             autoComplete="off"
