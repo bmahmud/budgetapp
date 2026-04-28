@@ -39,7 +39,7 @@ export default function SettingsScreen() {
     const syncedAvatarPath = latestUser?.user_metadata?.avatar_path as string | undefined;
     const syncedInitials = latestUser?.user_metadata?.initials as string | undefined;
     const resolvedSyncedAvatar = await resolveProfileAvatarUrl(syncedAvatarPath, syncedAvatar);
-    setAvatarUri(resolvedSyncedAvatar || syncedAvatar || preferences.avatarUri || null);
+    setAvatarUri(preferences.avatarUri || resolvedSyncedAvatar || syncedAvatar || null);
     setAvatarLoadFailed(false);
     setInitials((syncedInitials || preferences.initials || '').toUpperCase());
   };
@@ -116,8 +116,9 @@ export default function SettingsScreen() {
 
     try {
       setAvatarLoadFailed(false);
+      setAvatarUri(selectedUri);
       const uploaded = await uploadProfileAvatar(userId, selectedUri);
-      await saveProfilePreferences(uploaded.publicUrl, initials);
+      await saveProfilePreferences(selectedUri, initials);
       await syncProfileMetadata(uploaded.publicUrl, initials, uploaded.path);
       if (existingAvatarPath) {
         await removeProfileAvatar(existingAvatarPath).catch(() => undefined);
