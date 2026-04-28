@@ -6,9 +6,11 @@ import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
+import { supabase } from '@/lib/supabase';
 import { useBudgetStore } from '@/store/budget-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import * as ImagePicker from 'expo-image-picker';
+import { removeProfileAvatar, uploadProfileAvatar } from '@/lib/profile-avatar-storage';
 import { getProfilePreferences, setProfilePreferences } from '@/lib/profile-preferences';
 
 export default function SettingsScreen() {
@@ -30,10 +32,12 @@ export default function SettingsScreen() {
   useEffect(() => {
     void (async () => {
       const preferences = await getProfilePreferences();
-      setAvatarUri(preferences.avatarUri);
-      setInitials(preferences.initials);
+      const syncedAvatar = session?.user?.user_metadata?.avatar_url as string | undefined;
+      const syncedInitials = session?.user?.user_metadata?.initials as string | undefined;
+      setAvatarUri(preferences.avatarUri || syncedAvatar || null);
+      setInitials((syncedInitials || preferences.initials || '').toUpperCase());
     })();
-  }, []);
+  }, [session?.user?.id, session?.user?.user_metadata]);
 
   useEffect(() => {
     if (!profileMessage) return;
@@ -50,8 +54,31 @@ export default function SettingsScreen() {
   const saveProfilePreferences = async (nextAvatarUri: string | null, nextInitials: string) => {
     await setProfilePreferences({
       avatarUri: nextAvatarUri,
-      initials: nextInitials.trim().slice(0, 2).toUpperCase(),
+      initials: normalizeInitials(nextInitials),
     });
+  };
+
+  const normalizeInitials = (value: string) => value.trim().slice(0, 2).toUpperCase();
+  const getErrorMessage = (error: unknown) => {
+    if (error instanceof Error) return error.message;
+    if (typeof error === 'string') return error;
+    return 'Unknown error';
+  };
+
+  const syncProfileMetadata = async (
+    nextAvatarUri: string | null,
+    nextInitials: string,
+    nextAvatarPath: string | null,
+  ) => {
+    const normalizedInitials = normalizeInitials(nextInitials);
+    const { error } = await supabase.auth.updateUser({
+      data: {
+        avatar_url: nextAvatarUri,
+        avatar_path: nextAvatarPath,
+        initials: normalizedInitials,
+      },
+    });
+    if (error) throw error;
   };
 
   const handlePickProfileImage = async () => {
@@ -68,22 +95,55 @@ export default function SettingsScreen() {
       quality: 0.8,
     });
 
-    if (result.canceled || !result.assets[0]?.uri) return;
+    if (result.canceled || !result.assets[0]) return;
     const selectedUri = result.assets[0].uri;
-    setAvatarUri(selectedUri);
-    await saveProfilePreferences(selectedUri, initials);
-    setProfileMessage('Profile picture updated.');
+    const userId = session?.user?.id;
+    if (!userId) {
+      setProfileMessage('Could not upload picture. Please sign in again.');
+      return;
+    }
+
+    const existingAvatarPath = session?.user?.user_metadata?.avatar_path as string | undefined;
+
+    try {
+      setAvatarUri(selectedUri);
+      const uploaded = await uploadProfileAvatar(userId, selectedUri);
+      await saveProfilePreferences(selectedUri, initials);
+      await syncProfileMetadata(uploaded.publicUrl, initials, uploaded.path);
+      if (existingAvatarPath) {
+        await removeProfileAvatar(existingAvatarPath).catch(() => undefined);
+      }
+      setProfileMessage('Profile picture updated.');
+    } catch (error) {
+      setProfileMessage(`Could not sync profile picture: ${getErrorMessage(error)}`);
+    }
   };
 
   const handleInitialsSave = async () => {
-    await saveProfilePreferences(avatarUri, initials);
-    setProfileMessage('Initials saved.');
+    try {
+      await saveProfilePreferences(avatarUri, initials);
+      const existingAvatarPath = session?.user?.user_metadata?.avatar_path as string | undefined;
+      await syncProfileMetadata(avatarUri, initials, existingAvatarPath ?? null);
+      setInitials(normalizeInitials(initials));
+      setProfileMessage('Initials saved.');
+    } catch (error) {
+      setProfileMessage(`Could not sync initials: ${getErrorMessage(error)}`);
+    }
   };
 
   const handleRemovePhoto = async () => {
-    setAvatarUri(null);
-    await saveProfilePreferences(null, initials);
-    setProfileMessage('Profile picture removed.');
+    try {
+      const existingAvatarPath = session?.user?.user_metadata?.avatar_path as string | undefined;
+      if (existingAvatarPath) {
+        await removeProfileAvatar(existingAvatarPath).catch(() => undefined);
+      }
+      setAvatarUri(null);
+      await saveProfilePreferences(null, initials);
+      await syncProfileMetadata(null, initials, null);
+      setProfileMessage('Profile picture removed.');
+    } catch (error) {
+      setProfileMessage(`Could not remove picture: ${getErrorMessage(error)}`);
+    }
   };
 
   const handleReset = () => {

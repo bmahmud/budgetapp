@@ -99,7 +99,8 @@ export default function HomeScreen() {
   const getCategoryById = (id: string) => categories.find((c) => c.id === id);
   const user = session?.user;
   const userName = (user?.user_metadata?.full_name as string | undefined) ?? user?.email ?? 'User';
-  const initials = profileInitials || userName.trim().charAt(0).toUpperCase() || 'U';
+  const syncedInitials = user?.user_metadata?.initials as string | undefined;
+  const initials = syncedInitials || profileInitials || userName.trim().charAt(0).toUpperCase() || 'U';
   const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
   const avatarSourceUri = profileAvatarUri || avatarUrl || null;
 
