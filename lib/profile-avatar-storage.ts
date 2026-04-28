@@ -42,10 +42,10 @@ export async function resolveProfileAvatarUrl(
   avatarUrl?: string | null,
 ): Promise<string | null> {
   if (avatarPath) {
-    const { data, error } = await supabase.storage
-      .from(AVATAR_BUCKET)
-      .createSignedUrl(avatarPath, 60 * 60);
-    if (!error && data?.signedUrl) return data.signedUrl;
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(avatarPath);
+    if (publicUrl) return publicUrl;
   }
 
   if (avatarUrl) return avatarUrl;
