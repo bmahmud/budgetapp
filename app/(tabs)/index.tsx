@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/auth-context';
 import { getProfilePreferences } from '@/lib/profile-preferences';
 import { resolveProfileAvatarUrl } from '@/lib/profile-avatar-storage';
+import { supabase } from '@/lib/supabase';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -22,6 +23,7 @@ export default function HomeScreen() {
   const [syncedAvatarUri, setSyncedAvatarUri] = useState<string | null>(null);
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
   const [profileInitials, setProfileInitials] = useState('');
+  const [syncedInitials, setSyncedInitials] = useState('');
   const {
     transactions,
     goals,
@@ -58,13 +60,18 @@ export default function HomeScreen() {
 
   useEffect(() => {
     void (async () => {
-      const avatarPath = session?.user?.user_metadata?.avatar_path as string | undefined;
-      const avatarUrl = session?.user?.user_metadata?.avatar_url as string | undefined;
+      const {
+        data: { user: latestUser },
+      } = await supabase.auth.getUser();
+      const avatarPath = latestUser?.user_metadata?.avatar_path as string | undefined;
+      const avatarUrl = latestUser?.user_metadata?.avatar_url as string | undefined;
+      const latestInitials = latestUser?.user_metadata?.initials as string | undefined;
       const resolved = await resolveProfileAvatarUrl(avatarPath, avatarUrl);
       setSyncedAvatarUri(resolved);
+      setSyncedInitials((latestInitials ?? '').toUpperCase());
       setAvatarLoadFailed(false);
     })();
-  }, [session?.user?.id, session?.user?.user_metadata]);
+  }, [session?.user?.id, session?.user?.updated_at]);
 
   // Use 'all' to show all-time totals on dashboard
   const metrics = getSummaryMetrics('all');
@@ -112,7 +119,6 @@ export default function HomeScreen() {
   const getCategoryById = (id: string) => categories.find((c) => c.id === id);
   const user = session?.user;
   const userName = (user?.user_metadata?.full_name as string | undefined) ?? user?.email ?? 'User';
-  const syncedInitials = user?.user_metadata?.initials as string | undefined;
   const initials = syncedInitials || profileInitials || userName.trim().charAt(0).toUpperCase() || 'U';
   const avatarSourceUri = profileAvatarUri || syncedAvatarUri || null;
 
