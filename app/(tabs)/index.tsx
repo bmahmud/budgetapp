@@ -11,6 +11,7 @@ import { Image, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-nat
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/auth-context';
 import { getProfilePreferences } from '@/lib/profile-preferences';
+import { resolveProfileAvatarUrl } from '@/lib/profile-avatar-storage';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function HomeScreen() {
   const theme = Colors[colorScheme];
   const { session } = useAuth();
   const [profileAvatarUri, setProfileAvatarUri] = useState<string | null>(null);
+  const [syncedAvatarUri, setSyncedAvatarUri] = useState<string | null>(null);
   const [profileInitials, setProfileInitials] = useState('');
   const {
     transactions,
@@ -52,6 +54,15 @@ export default function HomeScreen() {
       void loadProfilePreferences();
     }, [loadProfilePreferences]),
   );
+
+  useEffect(() => {
+    void (async () => {
+      const avatarPath = session?.user?.user_metadata?.avatar_path as string | undefined;
+      const avatarUrl = session?.user?.user_metadata?.avatar_url as string | undefined;
+      const resolved = await resolveProfileAvatarUrl(avatarPath, avatarUrl);
+      setSyncedAvatarUri(resolved);
+    })();
+  }, [session?.user?.id, session?.user?.user_metadata]);
 
   // Use 'all' to show all-time totals on dashboard
   const metrics = getSummaryMetrics('all');
@@ -101,8 +112,7 @@ export default function HomeScreen() {
   const userName = (user?.user_metadata?.full_name as string | undefined) ?? user?.email ?? 'User';
   const syncedInitials = user?.user_metadata?.initials as string | undefined;
   const initials = syncedInitials || profileInitials || userName.trim().charAt(0).toUpperCase() || 'U';
-  const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
-  const avatarSourceUri = profileAvatarUri || avatarUrl || null;
+  const avatarSourceUri = syncedAvatarUri || profileAvatarUri || null;
 
   const cardSurface = [
     styles.summaryCard,

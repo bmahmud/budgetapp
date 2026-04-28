@@ -36,3 +36,18 @@ export async function removeProfileAvatar(path: string): Promise<void> {
   const { error } = await supabase.storage.from(AVATAR_BUCKET).remove([path]);
   if (error) throw error;
 }
+
+export async function resolveProfileAvatarUrl(
+  avatarPath?: string | null,
+  avatarUrl?: string | null,
+): Promise<string | null> {
+  if (avatarPath) {
+    const { data, error } = await supabase.storage
+      .from(AVATAR_BUCKET)
+      .createSignedUrl(avatarPath, 60 * 60);
+    if (!error && data?.signedUrl) return data.signedUrl;
+  }
+
+  if (avatarUrl) return avatarUrl;
+  return null;
+}

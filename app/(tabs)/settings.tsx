@@ -10,7 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { useBudgetStore } from '@/store/budget-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import * as ImagePicker from 'expo-image-picker';
-import { removeProfileAvatar, uploadProfileAvatar } from '@/lib/profile-avatar-storage';
+import { removeProfileAvatar, resolveProfileAvatarUrl, uploadProfileAvatar } from '@/lib/profile-avatar-storage';
 import { getProfilePreferences, setProfilePreferences } from '@/lib/profile-preferences';
 
 export default function SettingsScreen() {
@@ -33,8 +33,10 @@ export default function SettingsScreen() {
     void (async () => {
       const preferences = await getProfilePreferences();
       const syncedAvatar = session?.user?.user_metadata?.avatar_url as string | undefined;
+      const syncedAvatarPath = session?.user?.user_metadata?.avatar_path as string | undefined;
       const syncedInitials = session?.user?.user_metadata?.initials as string | undefined;
-      setAvatarUri(preferences.avatarUri || syncedAvatar || null);
+      const resolvedSyncedAvatar = await resolveProfileAvatarUrl(syncedAvatarPath, syncedAvatar);
+      setAvatarUri(resolvedSyncedAvatar || preferences.avatarUri || null);
       setInitials((syncedInitials || preferences.initials || '').toUpperCase());
     })();
   }, [session?.user?.id, session?.user?.user_metadata]);
