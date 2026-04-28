@@ -19,6 +19,7 @@ export default function SettingsScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const theme = Colors[colorScheme];
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
   const [initials, setInitials] = useState('');
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
   const bannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -36,7 +37,8 @@ export default function SettingsScreen() {
       const syncedAvatarPath = session?.user?.user_metadata?.avatar_path as string | undefined;
       const syncedInitials = session?.user?.user_metadata?.initials as string | undefined;
       const resolvedSyncedAvatar = await resolveProfileAvatarUrl(syncedAvatarPath, syncedAvatar);
-      setAvatarUri(resolvedSyncedAvatar || preferences.avatarUri || null);
+      setAvatarUri(preferences.avatarUri || resolvedSyncedAvatar || syncedAvatar || null);
+      setAvatarLoadFailed(false);
       setInitials((syncedInitials || preferences.initials || '').toUpperCase());
     })();
   }, [session?.user?.id, session?.user?.user_metadata]);
@@ -108,6 +110,7 @@ export default function SettingsScreen() {
     const existingAvatarPath = session?.user?.user_metadata?.avatar_path as string | undefined;
 
     try {
+      setAvatarLoadFailed(false);
       setAvatarUri(selectedUri);
       const uploaded = await uploadProfileAvatar(userId, selectedUri);
       await saveProfilePreferences(selectedUri, initials);
@@ -140,6 +143,7 @@ export default function SettingsScreen() {
         await removeProfileAvatar(existingAvatarPath).catch(() => undefined);
       }
       setAvatarUri(null);
+      setAvatarLoadFailed(false);
       await saveProfilePreferences(null, initials);
       await syncProfileMetadata(null, initials, null);
       setProfileMessage('Profile picture removed.');
@@ -198,8 +202,12 @@ export default function SettingsScreen() {
           </ThemedText>
           <View style={styles.profileRow}>
             <View style={[styles.avatarPreview, { borderColor: theme.border }]}>
-              {avatarUri ? (
-                <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+              {avatarUri && !avatarLoadFailed ? (
+                <Image
+                  source={{ uri: avatarUri }}
+                  style={styles.avatarImage}
+                  onError={() => setAvatarLoadFailed(true)}
+                />
               ) : (
                 <ThemedText style={[styles.avatarFallback, { color: theme.tint }]}>
                   {(initials.trim().slice(0, 2).toUpperCase() || 'U')}

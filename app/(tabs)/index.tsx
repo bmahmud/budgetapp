@@ -20,6 +20,7 @@ export default function HomeScreen() {
   const { session } = useAuth();
   const [profileAvatarUri, setProfileAvatarUri] = useState<string | null>(null);
   const [syncedAvatarUri, setSyncedAvatarUri] = useState<string | null>(null);
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
   const [profileInitials, setProfileInitials] = useState('');
   const {
     transactions,
@@ -61,6 +62,7 @@ export default function HomeScreen() {
       const avatarUrl = session?.user?.user_metadata?.avatar_url as string | undefined;
       const resolved = await resolveProfileAvatarUrl(avatarPath, avatarUrl);
       setSyncedAvatarUri(resolved);
+      setAvatarLoadFailed(false);
     })();
   }, [session?.user?.id, session?.user?.user_metadata]);
 
@@ -112,7 +114,7 @@ export default function HomeScreen() {
   const userName = (user?.user_metadata?.full_name as string | undefined) ?? user?.email ?? 'User';
   const syncedInitials = user?.user_metadata?.initials as string | undefined;
   const initials = syncedInitials || profileInitials || userName.trim().charAt(0).toUpperCase() || 'U';
-  const avatarSourceUri = syncedAvatarUri || profileAvatarUri || null;
+  const avatarSourceUri = profileAvatarUri || syncedAvatarUri || null;
 
   const cardSurface = [
     styles.summaryCard,
@@ -144,8 +146,12 @@ export default function HomeScreen() {
               onPress={() => router.push('/(tabs)/settings')}
               accessibilityRole="button"
               accessibilityLabel="Open profile settings">
-              {avatarSourceUri ? (
-                <Image source={{ uri: avatarSourceUri }} style={styles.avatarImage} />
+              {avatarSourceUri && !avatarLoadFailed ? (
+                <Image
+                  source={{ uri: avatarSourceUri }}
+                  style={styles.avatarImage}
+                  onError={() => setAvatarLoadFailed(true)}
+                />
               ) : (
                 <ThemedText style={[styles.avatarInitial, { color: theme.tint }]}>{initials}</ThemedText>
               )}
