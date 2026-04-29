@@ -42,6 +42,19 @@ export default function HomeScreen() {
     setProfileInitials(preferences.initials);
   }, []);
 
+  const refreshSyncedProfile = useCallback(async () => {
+    const {
+      data: { user: latestUser },
+    } = await supabase.auth.getUser();
+    const avatarPath = latestUser?.user_metadata?.avatar_path as string | undefined;
+    const avatarUrl = latestUser?.user_metadata?.avatar_url as string | undefined;
+    const latestInitials = latestUser?.user_metadata?.initials as string | undefined;
+    const resolved = await resolveProfileAvatarUrl(avatarPath, avatarUrl);
+    setSyncedAvatarUri(resolved);
+    setSyncedInitials((latestInitials ?? '').toUpperCase());
+    setAvatarLoadFailed(false);
+  }, []);
+
   useEffect(() => {
     if (!isInitialized) {
       initialize();
@@ -55,23 +68,21 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       void loadProfilePreferences();
-    }, [loadProfilePreferences]),
+      void refreshSyncedProfile();
+    }, [loadProfilePreferences, refreshSyncedProfile]),
   );
 
   useEffect(() => {
-    void (async () => {
-      const {
-        data: { user: latestUser },
-      } = await supabase.auth.getUser();
-      const avatarPath = latestUser?.user_metadata?.avatar_path as string | undefined;
-      const avatarUrl = latestUser?.user_metadata?.avatar_url as string | undefined;
-      const latestInitials = latestUser?.user_metadata?.initials as string | undefined;
-      const resolved = await resolveProfileAvatarUrl(avatarPath, avatarUrl);
-      setSyncedAvatarUri(resolved);
-      setSyncedInitials((latestInitials ?? '').toUpperCase());
-      setAvatarLoadFailed(false);
-    })();
-  }, [session?.user?.id, session?.user?.updated_at]);
+    void refreshSyncedProfile();
+  }, [session?.user?.id, session?.user?.updated_at, refreshSyncedProfile]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      void refreshSyncedProfile();
+    }, 30000);
+
+    return () => clearInterval(intervalId);
+  }, [refreshSyncedProfile]);
 
   // Use 'all' to show all-time totals on dashboard
   const metrics = getSummaryMetrics('all');
