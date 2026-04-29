@@ -10,7 +10,12 @@ import { supabase } from '@/lib/supabase';
 import { useBudgetStore } from '@/store/budget-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import * as ImagePicker from 'expo-image-picker';
-import { removeProfileAvatar, resolveProfileAvatarUrl, uploadProfileAvatar } from '@/lib/profile-avatar-storage';
+import {
+  removeProfileAvatar,
+  resolveProfileAvatarUrl,
+  uploadProfileAvatar,
+  uploadProfileAvatarFromBase64,
+} from '@/lib/profile-avatar-storage';
 import { getProfilePreferences, setProfilePreferences } from '@/lib/profile-preferences';
 
 export default function SettingsScreen() {
@@ -39,7 +44,7 @@ export default function SettingsScreen() {
     const syncedAvatarPath = latestUser?.user_metadata?.avatar_path as string | undefined;
     const syncedInitials = latestUser?.user_metadata?.initials as string | undefined;
     const resolvedSyncedAvatar = await resolveProfileAvatarUrl(syncedAvatarPath, syncedAvatar);
-    setAvatarUri(preferences.avatarUri || resolvedSyncedAvatar || syncedAvatar || null);
+    setAvatarUri((currentAvatarUri) => preferences.avatarUri || resolvedSyncedAvatar || syncedAvatar || currentAvatarUri || null);
     setAvatarLoadFailed(false);
     setInitials((syncedInitials || preferences.initials || '').toUpperCase());
   };
@@ -102,6 +107,7 @@ export default function SettingsScreen() {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
+      base64: true,
     });
 
     if (result.canceled || !result.assets[0]) return;
@@ -117,13 +123,15 @@ export default function SettingsScreen() {
     try {
       setAvatarLoadFailed(false);
       setAvatarUri(selectedUri);
-      const uploaded = await uploadProfileAvatar(userId, selectedUri);
+      const uploaded = result.assets[0].base64
+        ? await uploadProfileAvatarFromBase64(userId, result.assets[0].base64, 'image/jpeg')
+        : await uploadProfileAvatar(userId, selectedUri);
       await saveProfilePreferences(selectedUri, initials);
       await syncProfileMetadata(uploaded.publicUrl, initials, uploaded.path);
       if (existingAvatarPath) {
         await removeProfileAvatar(existingAvatarPath).catch(() => undefined);
       }
-      await refreshSyncedProfile();
+      void refreshSyncedProfile();
       setProfileMessage('Profile picture updated.');
     } catch (error) {
       setProfileMessage(`Could not sync profile picture: ${getErrorMessage(error)}`);
@@ -132,9 +140,13 @@ export default function SettingsScreen() {
 
   const handleInitialsSave = async () => {
     try {
-      await saveProfilePreferences(avatarUri, initials);
-      const existingAvatarPath = session?.user?.user_metadata?.avatar_path as string | undefined;
-      await syncProfileMetadata(avatarUri, initials, existingAvatarPath ?? null);
+      await saveProfilePreferences(null, initials);
+      const {
+        data: { user: latestUser },
+      } = await supabase.auth.getUser();
+      const existingAvatarPath = latestUser?.user_metadata?.avatar_path as string | undefined;
+      const existingAvatarUrl = latestUser?.user_metadata?.avatar_url as string | undefined;
+      await syncProfileMetadata(existingAvatarUrl ?? null, initials, existingAvatarPath ?? null);
       await refreshSyncedProfile();
       setInitials(normalizeInitials(initials));
       setProfileMessage('Initials saved.');
