@@ -1,6 +1,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { Colors, FringePalette } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
+import { validatePassword } from '@/lib/password-validation';
 import { supabase } from '@/lib/supabase';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
@@ -43,9 +44,6 @@ export default function ResetPasswordScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [isRecoveryReady, setIsRecoveryReady] = useState(false);
   const [formMessage, setFormMessage] = useState<string | null>(null);
-  const hasUppercase = /[A-Z]/.test(password);
-  const hasSpecialCharacter = /[^A-Za-z0-9]/.test(password);
-
   useEffect(() => {
     let isMounted = true;
 
@@ -108,12 +106,9 @@ export default function ResetPasswordScreen() {
       setFormMessage('Enter your new password.');
       return;
     }
-    if (password.length < 6) {
-      setFormMessage('Password too short. Use at least 6 characters.');
-      return;
-    }
-    if (!hasUppercase || !hasSpecialCharacter) {
-      setFormMessage('Password must include at least one uppercase letter and one special character.');
+    const passwordCheck = validatePassword(password);
+    if (!passwordCheck.isValid) {
+      setFormMessage(passwordCheck.message ?? 'Password does not meet requirements.');
       return;
     }
     if (password !== confirm) {

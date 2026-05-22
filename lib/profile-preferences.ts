@@ -29,3 +29,7 @@ export async function getProfilePreferences(): Promise<ProfilePreferences> {
 export async function setProfilePreferences(preferences: ProfilePreferences): Promise<void> {
   await AsyncStorage.setItem(PROFILE_PREFERENCES_KEY, JSON.stringify(preferences));
 }
+
+export async function clearProfilePreferences(): Promise<void> {
+  await AsyncStorage.removeItem(PROFILE_PREFERENCES_KEY);
+}

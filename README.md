@@ -54,6 +54,17 @@ A comprehensive personal budget tracking application built with React Native and
 - **Date Handling**: date-fns
 - **Icons**: Expo Symbols (SF Symbols)
 
+## GitHub
+
+- Repository: [github.com/bmahmud/budgetapp](https://github.com/bmahmud/budgetapp.git)
+- Remote: `origin` → `git@github.com:bmahmud/budgetapp.git`
+
+After `npm install`, a **post-commit hook** pushes each new commit on your current branch to `origin` (see `.githooks/post-commit`). To enable manually:
+
+```bash
+sh scripts/setup-git-hooks.sh
+```
+
 ## Getting Started
 
 ### Prerequisites

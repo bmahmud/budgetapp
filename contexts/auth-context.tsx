@@ -1,7 +1,9 @@
+import { clearProfilePreferences } from '@/lib/profile-preferences';
 import { supabase } from '@/lib/supabase';
 import { useBudgetStore } from '@/store/budget-store';
 import type { Session } from '@supabase/supabase-js';
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState, type AppStateStatus } from 'react-native';
 import * as Linking from 'expo-linking';
 
 interface AuthContextValue {
@@ -16,12 +18,20 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 const SESSION_TIMEOUT_MS = 60 * 60 * 1000;
+const SESSION_IDLE_MS = 15 * 60 * 1000;
+
+async function signOutAndClearLocal(resetLocalState: () => void) {
+  resetLocalState();
+  await clearProfilePreferences();
+  await supabase.auth.signOut();
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const hydrateFromRemote = useBudgetStore((s) => s.hydrateFromRemote);
   const resetLocalState = useBudgetStore((s) => s.resetLocalState);
+  const lastActivityAtRef = useRef(Date.now());
 
   useEffect(() => {
     let mounted = true;
@@ -59,11 +69,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const timeoutMs = Math.max(0, SESSION_TIMEOUT_MS - elapsedMs);
 
     const timeoutId = setTimeout(() => {
-      void supabase.auth.signOut();
+      void signOutAndClearLocal(resetLocalState);
     }, timeoutMs);
 
     return () => clearTimeout(timeoutId);
-  }, [session?.user?.id, session?.user?.last_sign_in_at, session?.user?.created_at]);
+  }, [session?.user?.id, session?.user?.last_sign_in_at, session?.user?.created_at, resetLocalState]);
+
+  useEffect(() => {
+    if (!session) return;
+
+    const touchActivity = () => {
+      lastActivityAtRef.current = Date.now();
+    };
+
+    touchActivity();
+    const subscription = AppState.addEventListener('change', (nextState: AppStateStatus) => {
+      if (nextState === 'active') {
+        touchActivity();
+        return;
+      }
+      if (nextState === 'background' || nextState === 'inactive') {
+        const idleMs = Date.now() - lastActivityAtRef.current;
+        if (idleMs >= SESSION_IDLE_MS) {
+          void signOutAndClearLocal(resetLocalState);
+        }
+      }
+    });
+
+    const idleCheckId = setInterval(() => {
+      const idleMs = Date.now() - lastActivityAtRef.current;
+      if (idleMs >= SESSION_IDLE_MS) {
+        void signOutAndClearLocal(resetLocalState);
+      }
+    }, 60_000);
+
+    return () => {
+      subscription.remove();
+      clearInterval(idleCheckId);
+    };
+  }, [session?.user?.id, resetLocalState]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
@@ -78,7 +122,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const requestPasswordReset = useCallback(async (email: string) => {
     const redirectTo = Linking.createURL('/reset-password');
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
-    return { error: error ? new Error(error.message) : null };
+    return {
+      error: error ? new Error('Unable to send reset email right now. Please try again later.') : null,
+    };
   }, []);
 
   const updatePassword = useCallback(async (password: string) => {
@@ -87,8 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    resetLocalState();
-    await supabase.auth.signOut();
+    await signOutAndClearLocal(resetLocalState);
   }, [resetLocalState]);
 
   const value = useMemo(

@@ -1,6 +1,16 @@
 import { supabase } from '@/lib/supabase';
 
 const AVATAR_BUCKET = 'avatars';
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
+
+function assertAvatarSize(byteLength: number) {
+  if (byteLength === 0) {
+    throw new Error('Selected image is empty.');
+  }
+  if (byteLength > MAX_AVATAR_BYTES) {
+    throw new Error('Image must be 5 MB or smaller.');
+  }
+}
 
 function base64ToUint8Array(base64: string): Uint8Array {
   const binaryString = atob(base64);
@@ -38,6 +48,7 @@ export async function uploadProfileAvatar(userId: string, localUri: string): Pro
   publicUrl: string;
 }> {
   const blob = await readBlobFromLocalUri(localUri);
+  assertAvatarSize(blob.size);
   const contentType = blob.type || guessContentTypeFromUri(localUri);
   const extension = guessFileExtension(contentType);
   const path = `${userId}/avatar-${Date.now()}.${extension}`;
@@ -67,7 +78,7 @@ export async function uploadProfileAvatarFromBase64(
   const path = `${userId}/avatar-${Date.now()}.${extension}`;
   const sanitized = base64.replace(/\s/g, '');
   const bytes = base64ToUint8Array(sanitized);
-  if (bytes.byteLength === 0) throw new Error('Selected image has zero bytes after base64 conversion.');
+  assertAvatarSize(bytes.byteLength);
 
   const { error: uploadError } = await supabase.storage.from(AVATAR_BUCKET).upload(path, bytes, {
     contentType,

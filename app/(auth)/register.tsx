@@ -1,6 +1,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { Colors, FringePalette } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
+import { validatePassword } from '@/lib/password-validation';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Link, useRouter } from 'expo-router';
@@ -27,9 +28,6 @@ export default function RegisterScreen() {
   const [confirm, setConfirm] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const hasUppercase = /[A-Z]/.test(password);
-  const hasSpecialCharacter = /[^A-Za-z0-9]/.test(password);
-
   async function handleRegister() {
     if (!isSupabaseConfigured) {
       Alert.alert(
@@ -42,15 +40,9 @@ export default function RegisterScreen() {
       Alert.alert('Missing fields', 'Enter email and password.');
       return;
     }
-    if (password.length < 6) {
-      Alert.alert('Password too short', 'Use at least 6 characters.');
-      return;
-    }
-    if (!hasUppercase || !hasSpecialCharacter) {
-      Alert.alert(
-        'Weak password',
-        'Password must include at least one uppercase letter and one special character.',
-      );
+    const passwordCheck = validatePassword(password);
+    if (!passwordCheck.isValid) {
+      Alert.alert('Weak password', passwordCheck.message ?? 'Password does not meet requirements.');
       return;
     }
     if (password !== confirm) {

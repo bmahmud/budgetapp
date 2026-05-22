@@ -5,7 +5,6 @@ import { isSupabaseConfigured } from '@/lib/supabase';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Link } from 'expo-router';
 import { useState } from 'react';
-import * as Linking from 'expo-linking';
 import {
   ActivityIndicator,
   Alert,
@@ -24,7 +23,6 @@ export default function ForgotPasswordScreen() {
   const theme = Colors[colorScheme];
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const debugRedirectUrl = Linking.createURL('/reset-password');
 
   async function handleRequestReset() {
     if (!isSupabaseConfigured) {
@@ -48,8 +46,8 @@ export default function ForgotPasswordScreen() {
     }
 
     Alert.alert(
-      'Reset link sent',
-      'Check your inbox for the password reset link. Open it on this device to continue.',
+      'Check your email',
+      'If an account exists for this email, you will receive a password reset link shortly.',
     );
   }
 
@@ -85,11 +83,6 @@ export default function ForgotPasswordScreen() {
             activeOpacity={0.85}>
             {submitting ? <ActivityIndicator color="#fff" /> : <ThemedText style={styles.buttonText}>Send reset link</ThemedText>}
           </TouchableOpacity>
-
-          <View style={[styles.debugBox, { backgroundColor: theme.card, borderColor: theme.border }]}>
-            <ThemedText style={[styles.debugTitle, { color: theme.text }]}>Debug redirect URL</ThemedText>
-            <ThemedText style={[styles.debugValue, { color: theme.mutedText }]}>{debugRedirectUrl}</ThemedText>
-          </View>
 
           <Link href="/(auth)/login" asChild>
             <TouchableOpacity style={styles.linkWrap}>
@@ -127,19 +120,5 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  debugBox: {
-    marginTop: 16,
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-  },
-  debugTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  debugValue: {
-    fontSize: 12,
-  },
   linkWrap: { marginTop: 24, alignItems: 'center' },
 });

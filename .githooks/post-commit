@@ -1,0 +1,16 @@
+#!/bin/sh
+# Push the current branch to GitHub after each local commit.
+branch=$(git symbolic-ref --short HEAD 2>/dev/null) || exit 0
+
+if ! git remote get-url origin >/dev/null 2>&1; then
+  echo "post-commit: no origin remote; skipping push."
+  exit 0
+fi
+
+echo "post-commit: pushing ${branch} to origin..."
+if git push origin "${branch}"; then
+  echo "post-commit: push succeeded."
+else
+  echo "post-commit: push failed. Run: git push origin ${branch}" >&2
+  exit 1
+fi
