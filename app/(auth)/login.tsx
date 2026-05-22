@@ -4,8 +4,8 @@ import { Colors, FringePalette } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Link, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ resetSent?: string }>();
   const { signIn } = useAuth();
   const colorScheme = useColorScheme() ?? 'light';
   const theme = Colors[colorScheme];
@@ -26,6 +27,13 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formMessage, setFormMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (params.resetSent !== '1') return;
+    setFormMessage(
+      'If an account exists for that email, a reset link was sent. Open it on this device to set a new password.',
+    );
+  }, [params.resetSent]);
 
   async function handleSignIn() {
     setFormMessage(null);

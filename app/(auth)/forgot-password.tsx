@@ -47,7 +47,7 @@ export default function ForgotPasswordScreen() {
     }
 
     setEmail('');
-    router.push('/(auth)/reset-password?sent=1');
+    router.replace('/(auth)/login?resetSent=1');
   }
 
   return (

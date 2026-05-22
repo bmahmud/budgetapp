@@ -26,7 +26,6 @@ interface ResetParams {
   refresh_token?: string;
   token_hash?: string;
   type?: string;
-  sent?: string;
 }
 
 export default function ResetPasswordScreen() {
@@ -41,8 +40,6 @@ export default function ResetPasswordScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [isRecoveryReady, setIsRecoveryReady] = useState(false);
   const [formMessage, setFormMessage] = useState<string | null>(null);
-  const awaitingEmailLink = params.sent === '1';
-
   useEffect(() => {
     if (isRecoveringPassword && session) {
       setIsRecoveryReady(true);
@@ -58,17 +55,6 @@ export default function ResetPasswordScreen() {
       if (isRecoveringPassword && session) return;
 
       setFormMessage(null);
-
-      if (awaitingEmailLink && !hasPasswordRecoveryTokensInUrl()) {
-        if (isMounted) {
-          setIsRecoveryReady(false);
-          setFormMessage(
-            'Check your email and open the reset link on this device. Then enter your new password here.',
-          );
-          setIsPreparingSession(false);
-        }
-        return;
-      }
 
       const { hash: hashParams, search: searchParams } = parseAuthParamsFromUrl();
 
@@ -128,7 +114,6 @@ export default function ResetPasswordScreen() {
     params.refresh_token,
     params.token_hash,
     params.type,
-    awaitingEmailLink,
     isRecoveringPassword,
     session,
   ]);
