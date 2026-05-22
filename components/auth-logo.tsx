@@ -1,9 +1,5 @@
-import { Image } from 'expo-image';
-import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { FringeLogo } from '@/components/fringe-logo';
 import { StyleSheet, View } from 'react-native';
-
-const LOGO_SOURCE = require('../assets/images/logo.png');
 
 interface AuthLogoProps {
   width?: number;
@@ -11,24 +7,9 @@ interface AuthLogoProps {
 }
 
 export function AuthLogo({ width = 240, height = 60 }: AuthLogoProps) {
-  const [renderKey, setRenderKey] = useState(0);
-
-  useFocusEffect(
-    useCallback(() => {
-      setRenderKey((current) => current + 1);
-    }, []),
-  );
-
   return (
     <View style={styles.wrap}>
-      <Image
-        key={`fringe-logo-${renderKey}`}
-        source={LOGO_SOURCE}
-        style={{ width, height }}
-        contentFit="contain"
-        cachePolicy="memory-disk"
-        accessibilityLabel="Fringe logo"
-      />
+      <FringeLogo width={width} height={height} remountKey="auth" containerStyle={styles.logo} />
     </View>
   );
 }
@@ -36,8 +17,9 @@ export function AuthLogo({ width = 240, height = 60 }: AuthLogoProps) {
 const styles = StyleSheet.create({
   wrap: {
     alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 72,
     marginBottom: 16,
+  },
+  logo: {
+    alignItems: 'center',
   },
 });

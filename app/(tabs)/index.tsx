@@ -7,6 +7,7 @@ import { useBudgetStore } from '@/store/budget-store';
 import { format } from 'date-fns';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
+import { FringeLogo } from '@/components/fringe-logo';
 import { Image, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/auth-context';
@@ -149,7 +150,11 @@ export default function HomeScreen() {
         <ThemedView style={styles.header}>
           <View style={styles.headerTopRow}>
             <View style={styles.headerTextWrap}>
-              <Image source={require('../../assets/images/logo.png')} style={styles.headerLogo} resizeMode="contain" />
+              <FringeLogo
+                width={180}
+                height={56}
+                remountKey={session?.user?.id ?? 'signed-out'}
+              />
               <ThemedText style={[styles.appSubtitle, { color: theme.mutedText }]}>
                 Budgeting personal Mobile App
               </ThemedText>
@@ -393,10 +398,6 @@ const styles = StyleSheet.create({
   },
   headerTextWrap: {
     flex: 1,
-  },
-  headerLogo: {
-    width: 180,
-    height: 56,
   },
   appSubtitle: {
     fontSize: 12,
