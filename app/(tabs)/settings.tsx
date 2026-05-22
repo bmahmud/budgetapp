@@ -1,11 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, ScrollView, TouchableOpacity, Alert, View, Image, TextInput } from 'react-native';
+import {
+  ActivityIndicator,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  View,
+  Image,
+  TextInput,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
+import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useBudgetStore } from '@/store/budget-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -19,7 +29,8 @@ import {
 import { getProfilePreferences, setProfilePreferences } from '@/lib/profile-preferences';
 
 export default function SettingsScreen() {
-  const { session, signOut } = useAuth();
+  const router = useRouter();
+  const { session, signOut, deleteAccount } = useAuth();
   const { isInitialized, initialize, resetAllData } = useBudgetStore();
   const colorScheme = useColorScheme() ?? 'light';
   const theme = Colors[colorScheme];
@@ -27,6 +38,9 @@ export default function SettingsScreen() {
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
   const [initials, setInitials] = useState('');
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const bannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -172,6 +186,41 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (!deletePassword) {
+      Alert.alert('Password required', 'Enter your password to permanently delete your account.');
+      return;
+    }
+
+    setIsDeletingAccount(true);
+    const { error } = await deleteAccount(deletePassword);
+    setIsDeletingAccount(false);
+
+    if (error) {
+      Alert.alert('Could not delete account', error.message);
+      return;
+    }
+
+    setShowDeleteAccount(false);
+    setDeletePassword('');
+    router.replace('/(auth)/login');
+  };
+
+  const confirmDeleteAccount = () => {
+    Alert.alert(
+      'Delete account permanently?',
+      'This removes your Fringe account, all transactions, goals, categories, and profile photo. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Continue',
+          style: 'destructive',
+          onPress: () => setShowDeleteAccount(true),
+        },
+      ],
+    );
+  };
+
   const handleReset = () => {
     Alert.alert(
       'Reset All Data',
@@ -296,6 +345,64 @@ export default function SettingsScreen() {
             activeOpacity={0.85}>
             <ThemedText style={{ color: theme.primary, fontWeight: '600' }}>Sign out</ThemedText>
           </TouchableOpacity>
+
+          {showDeleteAccount ? (
+            <ThemedView
+              style={[
+                styles.deleteAccountBox,
+                {
+                  borderColor: colorScheme === 'dark' ? '#9F1239' : '#FECACA',
+                  backgroundColor: colorScheme === 'dark' ? '#3F1D2B' : '#FEF2F2',
+                },
+              ]}>
+              <ThemedText style={[styles.deleteAccountWarning, { color: theme.text }]}>
+                Enter your password to confirm permanent deletion.
+              </ThemedText>
+              <TextInput
+                style={[
+                  styles.deletePasswordInput,
+                  { color: theme.text, borderColor: theme.border, backgroundColor: theme.background },
+                ]}
+                placeholder="Password"
+                placeholderTextColor={theme.mutedText}
+                secureTextEntry
+                autoComplete="off"
+                textContentType="none"
+                value={deletePassword}
+                onChangeText={setDeletePassword}
+                editable={!isDeletingAccount}
+              />
+              <TouchableOpacity
+                style={[styles.deleteConfirmButton, { backgroundColor: '#DC2626' }]}
+                onPress={() => void handleDeleteAccount()}
+                disabled={isDeletingAccount}
+                activeOpacity={0.85}>
+                {isDeletingAccount ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <ThemedText style={styles.deleteConfirmText}>Delete my account</ThemedText>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowDeleteAccount(false);
+                  setDeletePassword('');
+                }}
+                disabled={isDeletingAccount}
+                activeOpacity={0.85}>
+                <ThemedText style={{ color: theme.mutedText, textAlign: 'center', marginTop: 10 }}>
+                  Cancel
+                </ThemedText>
+              </TouchableOpacity>
+            </ThemedView>
+          ) : (
+            <TouchableOpacity
+              style={[styles.signOutRow, { borderColor: colorScheme === 'dark' ? '#9F1239' : '#FECACA', marginTop: 12 }]}
+              onPress={confirmDeleteAccount}
+              activeOpacity={0.85}>
+              <ThemedText style={{ color: '#DC2626', fontWeight: '600' }}>Delete account</ThemedText>
+            </TouchableOpacity>
+          )}
         </ThemedView>
 
         <ThemedView style={[styles.sectionCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
@@ -455,6 +562,35 @@ const styles = StyleSheet.create({
   initialsPreviewText: {
     fontSize: 12,
     marginBottom: 10,
+  },
+  deleteAccountBox: {
+    marginTop: 12,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  deleteAccountWarning: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 10,
+  },
+  deletePasswordInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    marginBottom: 10,
+  },
+  deleteConfirmButton: {
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  deleteConfirmText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

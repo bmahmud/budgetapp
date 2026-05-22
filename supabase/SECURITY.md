@@ -23,6 +23,10 @@
 3. **Authentication → Rate limits**
    - Keep defaults or tighten sign-in / reset-password limits
 
+### Account deletion
+
+1. Run `delete-account.sql` in SQL Editor (enables self-service account removal from the app)
+
 ### Storage
 
 1. Run `storage-policies.sql` in SQL Editor

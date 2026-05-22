@@ -260,13 +260,18 @@ export async function deleteGoalRemote(id: string): Promise<void> {
   if (error) throw error;
 }
 
-/** Deletes all user budget data and re-seeds default categories. Returns fresh categories. */
-export async function deleteAllUserData(userId: string): Promise<Category[]> {
+/** Removes all budget rows for a user (no re-seed). Used for account deletion. */
+export async function purgeUserBudgetData(userId: string): Promise<void> {
   const { error: e1 } = await supabase.from('transactions').delete().eq('user_id', userId);
   if (e1) throw e1;
   const { error: e2 } = await supabase.from('goals').delete().eq('user_id', userId);
   if (e2) throw e2;
   const { error: e3 } = await supabase.from('categories').delete().eq('user_id', userId);
   if (e3) throw e3;
+}
+
+/** Deletes all user budget data and re-seeds default categories. Returns fresh categories. */
+export async function deleteAllUserData(userId: string): Promise<Category[]> {
+  await purgeUserBudgetData(userId);
   return seedCategoriesForUser(userId);
 }

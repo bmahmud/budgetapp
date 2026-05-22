@@ -98,6 +98,15 @@ export async function removeProfileAvatar(path: string): Promise<void> {
   if (error) throw error;
 }
 
+export async function removeAllProfileAvatars(userId: string): Promise<void> {
+  const { data, error } = await supabase.storage.from(AVATAR_BUCKET).list(userId, { limit: 100 });
+  if (error || !data?.length) return;
+
+  const paths = data.map((file) => `${userId}/${file.name}`);
+  const { error: removeError } = await supabase.storage.from(AVATAR_BUCKET).remove(paths);
+  if (removeError) throw removeError;
+}
+
 export async function resolveProfileAvatarUrl(
   avatarPath?: string | null,
   avatarUrl?: string | null,

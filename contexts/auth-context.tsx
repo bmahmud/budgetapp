@@ -1,3 +1,4 @@
+import { deleteUserAccount } from '@/lib/account-deletion';
 import { clearProfilePreferences } from '@/lib/profile-preferences';
 import { supabase } from '@/lib/supabase';
 import { useBudgetStore } from '@/store/budget-store';
@@ -14,6 +15,7 @@ interface AuthContextValue {
   requestPasswordReset: (email: string) => Promise<{ error: Error | null }>;
   updatePassword: (password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  deleteAccount: (password: string) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -136,9 +138,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signOutAndClearLocal(resetLocalState);
   }, [resetLocalState]);
 
+  const deleteAccount = useCallback(
+    async (password: string) => {
+      const email = session?.user?.email;
+      if (!email) {
+        return { error: new Error('No signed-in account found.') };
+      }
+
+      try {
+        await deleteUserAccount(password, email);
+        resetLocalState();
+        await clearProfilePreferences();
+        setSession(null);
+        return { error: null };
+      } catch (error) {
+        return { error: error instanceof Error ? error : new Error('Account deletion failed.') };
+      }
+    },
+    [session?.user?.email, resetLocalState],
+  );
+
   const value = useMemo(
-    () => ({ session, isLoading, signIn, signUp, requestPasswordReset, updatePassword, signOut }),
-    [session, isLoading, signIn, signUp, requestPasswordReset, updatePassword, signOut],
+    () => ({
+      session,
+      isLoading,
+      signIn,
+      signUp,
+      requestPasswordReset,
+      updatePassword,
+      signOut,
+      deleteAccount,
+    }),
+    [session, isLoading, signIn, signUp, requestPasswordReset, updatePassword, signOut, deleteAccount],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
