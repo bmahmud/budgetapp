@@ -136,6 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     await signOutAndClearLocal(resetLocalState);
+    setSession(null);
   }, [resetLocalState]);
 
   const deleteAccount = useCallback(

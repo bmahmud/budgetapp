@@ -1,3 +1,4 @@
+import { AuthLogo } from '@/components/auth-logo';
 import { ThemedText } from '@/components/themed-text';
 import { Colors, FringePalette } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
@@ -7,7 +8,6 @@ import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -52,11 +52,13 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]} edges={['top', 'bottom']}>
+      <View style={styles.logoSection}>
+        <AuthLogo />
+      </View>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.flex}>
         <View style={styles.inner}>
-          <Image source={require('../../assets/images/logo.png')} style={styles.logo} resizeMode="contain" />
           <ThemedText style={[styles.subtitle, { color: theme.mutedText }]}>
             Sign in to sync your budget across devices.
           </ThemedText>
@@ -131,17 +133,16 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   flex: { flex: 1 },
+  logoSection: {
+    paddingTop: 24,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+  },
   inner: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 48,
+    paddingTop: 8,
     justifyContent: 'center',
-  },
-  logo: {
-    width: '100%',
-    height: 120,
-    marginBottom: 12,
-    backgroundColor: 'transparent',
   },
   subtitle: { marginBottom: 32, fontSize: 15 },
   input: {
