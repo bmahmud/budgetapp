@@ -1,9 +1,14 @@
 import { useAuth } from '@/contexts/auth-context';
+import {
+  hasPasswordRecoveryTokensInUrl,
+  PASSWORD_RECOVERY_PATH,
+} from '@/lib/password-recovery';
 import { Redirect } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 export default function Index() {
-  const { session, isLoading } = useAuth();
+  const { session, isLoading, isRecoveringPassword } = useAuth();
+  const pendingRecoveryFromUrl = hasPasswordRecoveryTokensInUrl();
 
   if (isLoading) {
     return (
@@ -11,6 +16,10 @@ export default function Index() {
         <ActivityIndicator size="large" />
       </View>
     );
+  }
+
+  if (pendingRecoveryFromUrl || isRecoveringPassword) {
+    return <Redirect href={PASSWORD_RECOVERY_PATH} />;
   }
 
   if (!session) {

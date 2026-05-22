@@ -2,6 +2,10 @@ import { ThemedText } from '@/components/themed-text';
 import { Colors, FringePalette } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { validatePassword } from '@/lib/password-validation';
+import {
+  hasPasswordRecoveryTokensInUrl,
+  parseAuthParamsFromUrl,
+} from '@/lib/password-recovery';
 import { supabase } from '@/lib/supabase';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
@@ -22,19 +26,12 @@ interface ResetParams {
   refresh_token?: string;
   token_hash?: string;
   type?: string;
-}
-
-function getWebHashParams() {
-  if (Platform.OS !== 'web' || typeof window === 'undefined') return new URLSearchParams();
-  const rawHash = window.location.hash.startsWith('#')
-    ? window.location.hash.slice(1)
-    : window.location.hash;
-  return new URLSearchParams(rawHash);
+  sent?: string;
 }
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
-  const { updatePassword } = useAuth();
+  const { updatePassword, isRecoveringPassword, session } = useAuth();
   const params = useLocalSearchParams<ResetParams>();
   const colorScheme = useColorScheme() ?? 'light';
   const theme = Colors[colorScheme];
@@ -44,20 +41,44 @@ export default function ResetPasswordScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [isRecoveryReady, setIsRecoveryReady] = useState(false);
   const [formMessage, setFormMessage] = useState<string | null>(null);
+  const awaitingEmailLink = params.sent === '1';
+
+  useEffect(() => {
+    if (isRecoveringPassword && session) {
+      setIsRecoveryReady(true);
+      setFormMessage('Enter your new password below.');
+      setIsPreparingSession(false);
+    }
+  }, [isRecoveringPassword, session]);
+
   useEffect(() => {
     let isMounted = true;
 
     async function prepareRecoverySession() {
+      if (isRecoveringPassword && session) return;
+
       setFormMessage(null);
-      const hashParams = getWebHashParams();
+
+      if (awaitingEmailLink && !hasPasswordRecoveryTokensInUrl()) {
+        if (isMounted) {
+          setIsRecoveryReady(false);
+          setFormMessage(
+            'Check your email and open the reset link on this device. Then enter your new password here.',
+          );
+          setIsPreparingSession(false);
+        }
+        return;
+      }
+
+      const { hash: hashParams, search: searchParams } = parseAuthParamsFromUrl();
 
       const tokenHashFromQuery = typeof params.token_hash === 'string' ? params.token_hash : '';
       const resetTypeFromQuery = typeof params.type === 'string' ? params.type : '';
       const accessTokenFromQuery = typeof params.access_token === 'string' ? params.access_token : '';
       const refreshTokenFromQuery = typeof params.refresh_token === 'string' ? params.refresh_token : '';
 
-      const tokenHash = tokenHashFromQuery || hashParams.get('token_hash') || '';
-      const resetType = resetTypeFromQuery || hashParams.get('type') || '';
+      const tokenHash = tokenHashFromQuery || hashParams.get('token_hash') || searchParams.get('token_hash') || '';
+      const resetType = resetTypeFromQuery || hashParams.get('type') || searchParams.get('type') || '';
       const accessToken = accessTokenFromQuery || hashParams.get('access_token') || '';
       const refreshToken = refreshTokenFromQuery || hashParams.get('refresh_token') || '';
 
@@ -84,7 +105,15 @@ export default function ResetPasswordScreen() {
           setFormMessage('Reset session ready. Enter your new password.');
         }
       } else {
-        setFormMessage('Reset link is missing required tokens. Request a new password reset email and try again.');
+        const {
+          data: { session: existingSession },
+        } = await supabase.auth.getSession();
+        if (existingSession && (isRecoveringPassword || hasPasswordRecoveryTokensInUrl())) {
+          setIsRecoveryReady(true);
+          setFormMessage('Enter your new password below.');
+        } else {
+          setFormMessage('Reset link is missing required tokens. Request a new password reset email and try again.');
+        }
       }
 
       if (isMounted) setIsPreparingSession(false);
@@ -94,7 +123,15 @@ export default function ResetPasswordScreen() {
     return () => {
       isMounted = false;
     };
-  }, [params.access_token, params.refresh_token, params.token_hash, params.type]);
+  }, [
+    params.access_token,
+    params.refresh_token,
+    params.token_hash,
+    params.type,
+    awaitingEmailLink,
+    isRecoveringPassword,
+    session,
+  ]);
 
   async function handlePasswordUpdate() {
     setFormMessage(null);
@@ -145,7 +182,7 @@ export default function ResetPasswordScreen() {
               styles.input,
               { color: theme.text, borderColor: theme.border, backgroundColor: theme.card },
             ]}
-            placeholder="New password (min 6 characters)"
+            placeholder="New password (min 6, 1 uppercase, 1 special)"
             placeholderTextColor={theme.mutedText}
             secureTextEntry
             autoComplete="off"
@@ -170,7 +207,7 @@ export default function ResetPasswordScreen() {
           <TouchableOpacity
             style={[styles.button, { backgroundColor: theme.primary, opacity: isPreparingSession ? 0.6 : 1 }]}
             onPress={handlePasswordUpdate}
-            disabled={submitting || isPreparingSession}
+            disabled={submitting || isPreparingSession || !isRecoveryReady}
             activeOpacity={0.85}>
             {submitting || isPreparingSession ? (
               <ActivityIndicator color="#fff" />

@@ -1,15 +1,16 @@
 import { deleteUserAccount } from '@/lib/account-deletion';
+import { getPasswordResetRedirectUrl } from '@/lib/password-recovery';
 import { clearProfilePreferences } from '@/lib/profile-preferences';
 import { supabase } from '@/lib/supabase';
 import { useBudgetStore } from '@/store/budget-store';
 import type { Session } from '@supabase/supabase-js';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
-import * as Linking from 'expo-linking';
-
 interface AuthContextValue {
   session: Session | null;
   isLoading: boolean;
+  isRecoveringPassword: boolean;
+  clearPasswordRecovery: () => void;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   requestPasswordReset: (email: string) => Promise<{ error: Error | null }>;
@@ -31,6 +32,7 @@ async function signOutAndClearLocal(resetLocalState: () => void) {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRecoveringPassword, setIsRecoveringPassword] = useState(false);
   const hydrateFromRemote = useBudgetStore((s) => s.hydrateFromRemote);
   const resetLocalState = useBudgetStore((s) => s.resetLocalState);
   const lastActivityAtRef = useRef(Date.now());
@@ -45,7 +47,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, s) => {
+    } = supabase.auth.onAuthStateChange((event, s) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecoveringPassword(true);
+      }
+      if (event === 'SIGNED_OUT') {
+        setIsRecoveringPassword(false);
+      }
       setSession(s);
     });
     return () => {
@@ -60,11 +68,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       resetLocalState();
       return;
     }
+    if (isRecoveringPassword) return;
     void hydrateFromRemote();
-  }, [session?.user?.id, isLoading, hydrateFromRemote, resetLocalState]);
+  }, [session?.user?.id, isLoading, isRecoveringPassword, hydrateFromRemote, resetLocalState]);
 
   useEffect(() => {
-    if (!session) return;
+    if (!session || isRecoveringPassword) return;
     const lastSignInAt = session.user.last_sign_in_at ?? session.user.created_at;
     const sessionStartMs = Date.parse(lastSignInAt);
     const elapsedMs = Number.isNaN(sessionStartMs) ? 0 : Date.now() - sessionStartMs;
@@ -75,10 +84,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, timeoutMs);
 
     return () => clearTimeout(timeoutId);
-  }, [session?.user?.id, session?.user?.last_sign_in_at, session?.user?.created_at, resetLocalState]);
+  }, [
+    session?.user?.id,
+    session?.user?.last_sign_in_at,
+    session?.user?.created_at,
+    isRecoveringPassword,
+    resetLocalState,
+  ]);
 
   useEffect(() => {
-    if (!session) return;
+    if (!session || isRecoveringPassword) return;
 
     const touchActivity = () => {
       lastActivityAtRef.current = Date.now();
@@ -109,9 +124,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       subscription.remove();
       clearInterval(idleCheckId);
     };
-  }, [session?.user?.id, resetLocalState]);
+  }, [session?.user?.id, isRecoveringPassword, resetLocalState]);
+
+  const clearPasswordRecovery = useCallback(() => {
+    setIsRecoveringPassword(false);
+  }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
+    setIsRecoveringPassword(false);
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     return { error: error ? new Error(error.message) : null };
   }, []);
@@ -122,7 +142,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const requestPasswordReset = useCallback(async (email: string) => {
-    const redirectTo = Linking.createURL('/reset-password');
+    const redirectTo = getPasswordResetRedirectUrl();
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
     return {
       error: error ? new Error('Unable to send reset email right now. Please try again later.') : null,
@@ -131,6 +151,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updatePassword = useCallback(async (password: string) => {
     const { error } = await supabase.auth.updateUser({ password });
+    if (!error) {
+      setIsRecoveringPassword(false);
+    }
     return { error: error ? new Error(error.message) : null };
   }, []);
 
@@ -163,6 +186,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       session,
       isLoading,
+      isRecoveringPassword,
+      clearPasswordRecovery,
       signIn,
       signUp,
       requestPasswordReset,
@@ -170,7 +195,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signOut,
       deleteAccount,
     }),
-    [session, isLoading, signIn, signUp, requestPasswordReset, updatePassword, signOut, deleteAccount],
+    [
+      session,
+      isLoading,
+      isRecoveringPassword,
+      clearPasswordRecovery,
+      signIn,
+      signUp,
+      requestPasswordReset,
+      updatePassword,
+      signOut,
+      deleteAccount,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

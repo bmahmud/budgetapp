@@ -3,7 +3,7 @@ import { Colors, FringePalette } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -18,6 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ForgotPasswordScreen() {
+  const router = useRouter();
   const { requestPasswordReset } = useAuth();
   const colorScheme = useColorScheme() ?? 'light';
   const theme = Colors[colorScheme];
@@ -45,10 +46,8 @@ export default function ForgotPasswordScreen() {
       return;
     }
 
-    Alert.alert(
-      'Check your email',
-      'If an account exists for this email, you will receive a password reset link shortly.',
-    );
+    setEmail('');
+    router.push('/(auth)/reset-password?sent=1');
   }
 
   return (

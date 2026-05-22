@@ -20,6 +20,7 @@
 2. **Authentication → URL Configuration**
    - Site URL: your Vercel production URL
    - Redirect URLs: `https://<vercel-domain>/reset-password`, `fringe://reset-password`, Expo dev URLs if needed
+   - Set `EXPO_PUBLIC_PASSWORD_RESET_REDIRECT_URL` in Vercel to the same `/reset-password` URL (not the login page)
 3. **Authentication → Rate limits**
    - Keep defaults or tighten sign-in / reset-password limits
 

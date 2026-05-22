@@ -3,25 +3,56 @@ import '@/lib/supabase';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, usePathname, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as Linking from 'expo-linking';
 import { useEffect, useMemo } from 'react';
 import 'react-native-reanimated';
 
 import { Colors } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import {
+  hasPasswordRecoveryTokensInUrl,
+  PASSWORD_RECOVERY_PATH,
+} from '@/lib/password-recovery';
 
 function AuthStack() {
-  const { session, isLoading } = useAuth();
+  const { session, isLoading, isRecoveringPassword } = useAuth();
   const segments = useSegments();
   const pathname = usePathname();
   const router = useRouter();
+
+  useEffect(() => {
+    function handleDeepLink(url: string) {
+      if (!url.includes('reset-password') && !url.includes('type=recovery')) return;
+      router.replace(PASSWORD_RECOVERY_PATH);
+    }
+
+    void Linking.getInitialURL().then((url) => {
+      if (url) handleDeepLink(url);
+    });
+
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      handleDeepLink(url);
+    });
+
+    return () => subscription.remove();
+  }, [router]);
 
   useEffect(() => {
     if (isLoading) return;
 
     const first = segments[0];
     const atEntry = pathname === '/' || pathname === '';
-    const isPasswordRecoveryRoute = pathname.includes('reset-password') || pathname.includes('forgot-password');
+    const onRecoveryRoute =
+      pathname.includes('reset-password') || pathname.includes('forgot-password');
+    const pendingRecoveryFromUrl = hasPasswordRecoveryTokensInUrl();
+    const inPasswordRecovery =
+      isRecoveringPassword || pendingRecoveryFromUrl || onRecoveryRoute;
+
+    if (pendingRecoveryFromUrl && !pathname.includes('reset-password')) {
+      router.replace(PASSWORD_RECOVERY_PATH);
+      return;
+    }
 
     if (!session) {
       const isPublic = first === '(auth)' || atEntry;
@@ -31,10 +62,15 @@ function AuthStack() {
       return;
     }
 
-    if (first === '(auth)' && !isPasswordRecoveryRoute) {
+    if (inPasswordRecovery && !pathname.includes('reset-password')) {
+      router.replace(PASSWORD_RECOVERY_PATH);
+      return;
+    }
+
+    if (first === '(auth)' && !inPasswordRecovery) {
       router.replace('/(tabs)');
     }
-  }, [session, isLoading, segments, pathname, router]);
+  }, [session, isLoading, isRecoveringPassword, segments, pathname, router]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
