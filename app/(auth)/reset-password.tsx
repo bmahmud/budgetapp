@@ -1,5 +1,4 @@
-import { ThemedText } from '@/components/themed-text';
-import { Colors, FringePalette } from '@/constants/theme';
+import { FringeInput } from '@/components/fringe/form';
 import { useAuth } from '@/contexts/auth-context';
 import { validatePassword } from '@/lib/password-validation';
 import {
@@ -7,33 +6,30 @@ import {
   parseAuthParamsFromUrl,
 } from '@/lib/password-recovery';
 import { supabase } from '@/lib/supabase';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/theme/ThemeContext';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
+  Pressable,
+  Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
-interface ResetParams {
-  access_token?: string;
-  refresh_token?: string;
-  token_hash?: string;
-  type?: string;
-}
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
   const { updatePassword, isRecoveringPassword, session } = useAuth();
-  const params = useLocalSearchParams<ResetParams>();
-  const colorScheme = useColorScheme() ?? 'light';
-  const theme = Colors[colorScheme];
+  const params = useLocalSearchParams<{
+    access_token?: string;
+    refresh_token?: string;
+    token_hash?: string;
+    type?: string;
+  }>();
+  const { c, sh } = useTheme();
+  const insets = useSafeAreaInsets();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [isPreparingSession, setIsPreparingSession] = useState(true);
@@ -152,95 +148,71 @@ export default function ResetPasswordScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
-        <View style={styles.inner}>
-          <ThemedText type="title" style={styles.title}>
-            Set New Password
-          </ThemedText>
-          <ThemedText style={[styles.subtitle, { color: theme.mutedText }]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: c.bgBase }} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <View
+          style={{
+            flex: 1,
+            paddingHorizontal: 24,
+            paddingTop: insets.top + 24,
+            justifyContent: 'center',
+          }}>
+          <Text style={{ fontSize: 30, fontWeight: '800', color: c.ink1, marginBottom: 8 }}>Set New Password</Text>
+          <Text style={{ fontSize: 15, color: c.ink2, marginBottom: 24 }}>
             Choose a strong password for your Fringe account.
-          </ThemedText>
+          </Text>
 
-          <TextInput
-            style={[
-              styles.input,
-              { color: theme.text, borderColor: theme.border, backgroundColor: theme.card },
-            ]}
-            placeholder="New password (min 6, 1 uppercase, 1 special)"
-            placeholderTextColor={theme.mutedText}
-            secureTextEntry
-            autoComplete="off"
-            textContentType="none"
-            value={password}
-            onChangeText={setPassword}
-          />
-          <TextInput
-            style={[
-              styles.input,
-              { color: theme.text, borderColor: theme.border, backgroundColor: theme.card },
-            ]}
-            placeholder="Confirm new password"
-            placeholderTextColor={theme.mutedText}
-            secureTextEntry
-            autoComplete="off"
-            textContentType="none"
-            value={confirm}
-            onChangeText={setConfirm}
-          />
-
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: theme.primary, opacity: isPreparingSession ? 0.6 : 1 }]}
-            onPress={handlePasswordUpdate}
-            disabled={submitting || isPreparingSession || !isRecoveryReady}
-            activeOpacity={0.85}>
-            {submitting || isPreparingSession ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <ThemedText style={styles.buttonText}>Update password</ThemedText>
-            )}
-          </TouchableOpacity>
+          <View style={{ gap: 10 }}>
+            <FringeInput
+              value={password}
+              onChange={setPassword}
+              placeholder="New password (min 6, 1 uppercase, 1 special)"
+              secureTextEntry
+              autoComplete="off"
+              textContentType="none"
+            />
+            <FringeInput
+              value={confirm}
+              onChange={setConfirm}
+              placeholder="Confirm new password"
+              secureTextEntry
+              autoComplete="off"
+              textContentType="none"
+            />
+            <Pressable
+              onPress={() => void handlePasswordUpdate()}
+              disabled={submitting || isPreparingSession || !isRecoveryReady}
+              style={({ pressed }) => [
+                {
+                  paddingVertical: 15,
+                  backgroundColor: c.accent,
+                  borderRadius: 14,
+                  alignItems: 'center',
+                  marginTop: 4,
+                  opacity: isPreparingSession ? 0.6 : 1,
+                  ...sh.fab,
+                },
+                pressed && { transform: [{ scale: 0.985 }] },
+              ]}>
+              {submitting || isPreparingSession ? (
+                <ActivityIndicator color={c.accentOn} />
+              ) : (
+                <Text style={{ color: c.accentOn, fontWeight: '600' }}>Update password</Text>
+              )}
+            </Pressable>
+          </View>
 
           {formMessage ? (
-            <ThemedText style={[styles.formMessage, { color: theme.mutedText }]}>{formMessage}</ThemedText>
+            <Text style={{ marginTop: 12, textAlign: 'center', fontSize: 13, color: c.ink2 }}>{formMessage}</Text>
           ) : null}
 
           <Link href="/(auth)/login" asChild>
-            <TouchableOpacity style={styles.linkWrap}>
-              <ThemedText style={{ color: FringePalette.purple }}>Back to sign in</ThemedText>
-            </TouchableOpacity>
+            <Pressable style={{ marginTop: 24, alignItems: 'center' }}>
+              <Text style={{ color: c.accent, fontWeight: '600' }}>Back to sign in</Text>
+            </Pressable>
           </Link>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safe: { flex: 1 },
-  flex: { flex: 1 },
-  inner: {
-    flex: 1,
-    paddingHorizontal: 24,
-    justifyContent: 'center',
-  },
-  title: { marginBottom: 8, fontSize: 30, fontWeight: '800' },
-  subtitle: { marginBottom: 24, fontSize: 15 },
-  input: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    marginBottom: 12,
-  },
-  button: {
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  formMessage: { marginTop: 12, textAlign: 'center', fontSize: 13 },
-  linkWrap: { marginTop: 24, alignItems: 'center' },
-});

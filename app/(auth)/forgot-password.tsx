@@ -1,43 +1,29 @@
-import { ThemedText } from '@/components/themed-text';
-import { Colors, FringePalette } from '@/constants/theme';
+import { FringeInput } from '@/components/fringe/form';
 import { useAuth } from '@/contexts/auth-context';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/theme/ThemeContext';
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const { requestPasswordReset } = useAuth();
-  const colorScheme = useColorScheme() ?? 'light';
-  const theme = Colors[colorScheme];
+  const { c, sh } = useTheme();
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   async function handleRequestReset() {
     if (!isSupabaseConfigured) {
-      Alert.alert(
-        'Supabase not configured',
-        'Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to .env and restart Expo.',
-      );
+      Alert.alert('Supabase not configured', 'Add Supabase env vars to .env and restart Expo.');
       return;
     }
     if (!email.trim()) {
       Alert.alert('Missing email', 'Enter the email address linked to your account.');
       return;
     }
-
     setSubmitting(true);
     const { error } = await requestPasswordReset(email);
     setSubmitting(false);
@@ -45,79 +31,35 @@ export default function ForgotPasswordScreen() {
       Alert.alert('Request failed', error.message);
       return;
     }
-
     setEmail('');
     router.replace('/(auth)/login?resetSent=1');
   }
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
-        <View style={styles.inner}>
-          <ThemedText type="title" style={styles.title}>
-            Reset Password
-          </ThemedText>
-          <ThemedText style={[styles.subtitle, { color: theme.mutedText }]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: c.bgBase }} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: insets.top + 24, justifyContent: 'center' }}>
+          <Text style={{ fontSize: 30, fontWeight: '800', color: c.ink1, marginBottom: 8 }}>Reset Password</Text>
+          <Text style={{ fontSize: 15, color: c.ink2, marginBottom: 24 }}>
             Enter your email and we will send a secure reset link.
-          </ThemedText>
-
-          <TextInput
-            style={[
-              styles.input,
-              { color: theme.text, borderColor: theme.border, backgroundColor: theme.card },
-            ]}
-            placeholder="Email"
-            placeholderTextColor={theme.mutedText}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
-          />
-
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: theme.primary }]}
-            onPress={handleRequestReset}
+          </Text>
+          <FringeInput value={email} onChange={setEmail} placeholder="Email" autoCapitalize="none" keyboardType="email-address" />
+          <Pressable
+            onPress={() => void handleRequestReset()}
             disabled={submitting}
-            activeOpacity={0.85}>
-            {submitting ? <ActivityIndicator color="#fff" /> : <ThemedText style={styles.buttonText}>Send reset link</ThemedText>}
-          </TouchableOpacity>
-
+            style={({ pressed }) => [
+              { paddingVertical: 15, backgroundColor: c.accent, borderRadius: 14, alignItems: 'center', marginTop: 12, ...sh.fab },
+              pressed && { transform: [{ scale: 0.985 }] },
+            ]}>
+            {submitting ? <ActivityIndicator color={c.accentOn} /> : <Text style={{ color: c.accentOn, fontWeight: '600' }}>Send reset link</Text>}
+          </Pressable>
           <Link href="/(auth)/login" asChild>
-            <TouchableOpacity style={styles.linkWrap}>
-              <ThemedText style={{ color: FringePalette.purple }}>Back to sign in</ThemedText>
-            </TouchableOpacity>
+            <Pressable style={{ marginTop: 24, alignItems: 'center' }}>
+              <Text style={{ color: c.accent }}>Back to sign in</Text>
+            </Pressable>
           </Link>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safe: { flex: 1 },
-  flex: { flex: 1 },
-  inner: {
-    flex: 1,
-    paddingHorizontal: 24,
-    justifyContent: 'center',
-  },
-  title: { marginBottom: 8, fontSize: 30, fontWeight: '800' },
-  subtitle: { marginBottom: 24, fontSize: 15 },
-  input: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    marginBottom: 12,
-  },
-  button: {
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  linkWrap: { marginTop: 24, alignItems: 'center' },
-});

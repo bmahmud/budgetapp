@@ -7,9 +7,8 @@ import * as Linking from 'expo-linking';
 import { useEffect, useMemo } from 'react';
 import 'react-native-reanimated';
 
-import { Colors } from '@/constants/theme';
+import { FringeThemeProvider, useTheme } from '@/theme/ThemeContext';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import {
   hasPasswordRecoveryTokensInUrl,
   PASSWORD_RECOVERY_PATH,
@@ -87,30 +86,37 @@ function AuthStack() {
 }
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  return (
+    <FringeThemeProvider>
+      <RootLayoutNav />
+    </FringeThemeProvider>
+  );
+}
+
+function RootLayoutNav() {
+  const { c, name } = useTheme();
 
   const navigationTheme = useMemo(() => {
-    const base = colorScheme === 'dark' ? DarkTheme : DefaultTheme;
-    const c = Colors[colorScheme ?? 'light'];
+    const base = name === 'dark' ? DarkTheme : DefaultTheme;
     return {
       ...base,
       colors: {
         ...base.colors,
-        primary: c.primary,
-        background: c.background,
-        card: c.card,
-        text: c.text,
-        border: c.border,
-        notification: c.primary,
+        primary: c.accent,
+        background: c.bgBase,
+        card: c.bgElev,
+        text: c.ink1,
+        border: c.line,
+        notification: c.accent,
       },
     };
-  }, [colorScheme]);
+  }, [name, c]);
 
   return (
     <AuthProvider>
       <ThemeProvider value={navigationTheme}>
         <AuthStack />
-        <StatusBar style="auto" />
+        <StatusBar style={name === 'dark' ? 'light' : 'dark'} />
       </ThemeProvider>
     </AuthProvider>
   );

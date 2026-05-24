@@ -1,20 +1,19 @@
-import { useEffect, useState } from 'react';
-import { StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { ThemedView } from '@/components/themed-view';
-import { ThemedText } from '@/components/themed-text';
+import { Card } from '@/components/fringe/card';
+import { DatePicker } from '@/components/date-picker';
+import { FringeInput, Label } from '@/components/fringe/form';
 import { GoalCard } from '@/components/goal-card';
+import { ScreenScroll } from '@/components/fringe/screen-scroll';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useTheme } from '@/theme/ThemeContext';
 import { useBudgetStore } from '@/store/budget-store';
 import { Goal } from '@/types';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors, FringePalette } from '@/constants/theme';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Alert, Pressable, Text, View } from 'react-native';
 
 export default function GoalDetailScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme() ?? 'light';
-  const theme = Colors[colorScheme];
+  const { c } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { goals, updateGoal, deleteGoal, isInitialized, initialize } = useBudgetStore();
   const [goal, setGoal] = useState<Goal | undefined>();
@@ -24,13 +23,8 @@ export default function GoalDetailScreen() {
   const [currentAmount, setCurrentAmount] = useState('');
   const [deadline, setDeadline] = useState('');
 
-  const textColor = theme.text;
-  const borderColor = theme.border;
-
   useEffect(() => {
-    if (!isInitialized) {
-      initialize();
-    }
+    if (!isInitialized) initialize();
   }, [isInitialized, initialize]);
 
   useEffect(() => {
@@ -98,155 +92,88 @@ export default function GoalDetailScreen() {
 
   if (!goal) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <ThemedView style={styles.loadingContainer}>
-          <ThemedText>Loading...</ThemedText>
-        </ThemedView>
-      </SafeAreaView>
+      <ScreenScroll>
+        <Text style={{ marginTop: 48, textAlign: 'center', color: c.ink3 }}>Loading...</Text>
+      </ScreenScroll>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <ThemedView style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <IconSymbol name="chevron.left" size={24} color={theme.primary} />
-        </TouchableOpacity>
-        <ThemedText type="subtitle">{isEditing ? 'Edit Goal' : 'Goal Details'}</ThemedText>
-        <View style={styles.headerRight}>
+    <ScreenScroll>
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          paddingHorizontal: 16,
+          paddingBottom: 8,
+        }}>
+        <Pressable onPress={() => router.back()} hitSlop={12} accessibilityRole="button">
+          <IconSymbol name="chevron.left" size={24} color={c.accent} />
+        </Pressable>
+        <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
           {isEditing ? (
-            <TouchableOpacity onPress={handleSave}>
-              <IconSymbol name="checkmark.circle.fill" size={24} color={FringePalette.income} />
-            </TouchableOpacity>
+            <Pressable onPress={handleSave} hitSlop={12} accessibilityRole="button">
+              <IconSymbol name="checkmark.circle.fill" size={24} color={c.positive} />
+            </Pressable>
           ) : (
             <>
-              <TouchableOpacity onPress={() => setIsEditing(true)} style={styles.editButton}>
-                <IconSymbol name="pencil" size={20} color={theme.primary} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleDelete}>
-                <IconSymbol name="trash.fill" size={24} color={FringePalette.expense} />
-              </TouchableOpacity>
+              <Pressable onPress={() => setIsEditing(true)} hitSlop={12} accessibilityRole="button">
+                <IconSymbol name="pencil" size={20} color={c.accent} />
+              </Pressable>
+              <Pressable onPress={handleDelete} hitSlop={12} accessibilityRole="button">
+                <IconSymbol name="trash.fill" size={22} color={c.negative} />
+              </Pressable>
             </>
           )}
         </View>
-      </ThemedView>
+      </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+      <View style={{ paddingHorizontal: 16, paddingBottom: 32 }}>
+        <Text style={{ fontSize: 26, fontWeight: '700', color: c.ink1, letterSpacing: -0.6, marginBottom: 16 }}>
+          {isEditing ? 'Edit Goal' : 'Goal Details'}
+        </Text>
+
         {!isEditing ? (
           <GoalCard goal={goal} />
         ) : (
-          <ThemedView style={styles.form}>
-            <ThemedView style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Goal Name</ThemedText>
-              <TextInput
-                style={[styles.input, { borderColor, color: textColor }]}
-                value={name}
-                onChangeText={setName}
-                placeholderTextColor="#999"
-              />
-            </ThemedView>
+          <Card pad={16} radius="lg">
+            <View style={{ marginBottom: 16 }}>
+              <Label>Goal Name</Label>
+              <FringeInput value={name} onChange={setName} />
+            </View>
 
-            <ThemedView style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Target Amount</ThemedText>
-              <TextInput
-                style={[styles.input, { borderColor, color: textColor }]}
-                value={targetAmount}
-                onChangeText={setTargetAmount}
-                keyboardType="decimal-pad"
-                placeholderTextColor="#999"
-              />
-            </ThemedView>
+            <View style={{ marginBottom: 16 }}>
+              <Label>Target Amount</Label>
+              <FringeInput value={targetAmount} onChange={setTargetAmount} keyboardType="decimal-pad" />
+            </View>
 
-            <ThemedView style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Current Amount</ThemedText>
-              <TextInput
-                style={[styles.input, { borderColor, color: textColor }]}
-                value={currentAmount}
-                onChangeText={setCurrentAmount}
-                keyboardType="decimal-pad"
-                placeholderTextColor="#999"
-              />
-            </ThemedView>
+            <View style={{ marginBottom: 16 }}>
+              <Label>Current Amount</Label>
+              <FringeInput value={currentAmount} onChange={setCurrentAmount} keyboardType="decimal-pad" />
+            </View>
 
-            <ThemedView style={styles.inputGroup}>
-              <ThemedText style={styles.label}>Deadline (YYYY-MM-DD) - Optional</ThemedText>
-              <TextInput
-                style={[styles.input, { borderColor, color: textColor }]}
-                value={deadline}
-                onChangeText={setDeadline}
-                placeholderTextColor="#999"
-              />
-            </ThemedView>
+            <View style={{ marginBottom: 16 }}>
+              <Label>Deadline (optional)</Label>
+              <DatePicker value={deadline} onChange={setDeadline} placeholder="mm / dd / yyyy" borderColor={c.line} />
+            </View>
 
-            <TouchableOpacity style={styles.cancelButton} onPress={() => setIsEditing(false)}>
-              <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
-            </TouchableOpacity>
-          </ThemedView>
+            <Pressable
+              onPress={() => setIsEditing(false)}
+              style={{
+                marginTop: 8,
+                paddingVertical: 14,
+                borderRadius: 12,
+                alignItems: 'center',
+                backgroundColor: c.bgSubtle,
+                borderWidth: 1,
+                borderColor: c.line,
+              }}>
+              <Text style={{ fontSize: 15, fontWeight: '600', color: c.ink2 }}>Cancel</Text>
+            </Pressable>
+          </Card>
         )}
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+    </ScreenScroll>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'center',
-  },
-  editButton: {
-    padding: 4,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  form: {
-    padding: 16,
-    borderRadius: 12,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-  },
-  cancelButton: {
-    backgroundColor: '#E0E0E0',
-    padding: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
-

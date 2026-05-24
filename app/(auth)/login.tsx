@@ -1,28 +1,27 @@
-import { AuthLogo } from '@/components/auth-logo';
-import { ThemedText } from '@/components/themed-text';
-import { Colors, FringePalette } from '@/constants/theme';
+import { FringeInput } from '@/components/fringe/form';
+import { Logo } from '@/components/fringe/logo';
 import { useAuth } from '@/contexts/auth-context';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/theme/ThemeContext';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
+  Pressable,
+  ScrollView,
+  Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ resetSent?: string }>();
   const { signIn } = useAuth();
-  const colorScheme = useColorScheme() ?? 'light';
-  const theme = Colors[colorScheme];
+  const { c, sh } = useTheme();
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -54,122 +53,109 @@ export default function LoginScreen() {
       setFormMessage(error.message);
       return;
     }
-    setFormMessage('Signed in successfully. Redirecting...');
     router.replace('/(tabs)');
   }
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]} edges={['top', 'bottom']}>
-      <View style={styles.logoSection}>
-        <AuthLogo />
-      </View>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.flex}>
-        <View style={styles.inner}>
-          <ThemedText style={[styles.subtitle, { color: theme.mutedText }]}>
-            Sign in to sync your budget across devices.
-          </ThemedText>
+    <SafeAreaView style={{ flex: 1, backgroundColor: c.bgBase }} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <ScrollView
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingHorizontal: 24,
+            paddingTop: insets.top + 40,
+            paddingBottom: insets.bottom + 40,
+            justifyContent: 'center',
+          }}
+          keyboardShouldPersistTaps="handled">
+          <View style={{ alignItems: 'center', marginBottom: 36 }}>
+            <Logo size={64} tagline withWordmark={false} />
+            <Text
+              style={{
+                fontSize: 32,
+                fontWeight: '700',
+                color: c.ink1,
+                letterSpacing: -0.7,
+                marginTop: 18,
+                lineHeight: 36,
+                textAlign: 'center',
+              }}>
+              Money that{'\n'}moves with you.
+            </Text>
+            <Text
+              style={{
+                fontSize: 14,
+                color: c.ink2,
+                marginTop: 12,
+                lineHeight: 20,
+                maxWidth: 280,
+                textAlign: 'center',
+              }}>
+              Track every dollar, plan every week, save what matters. Built for households.
+            </Text>
+          </View>
 
-          <TextInput
-            style={[
-              styles.input,
-              { color: theme.text, borderColor: theme.border, backgroundColor: theme.card },
-            ]}
-            placeholder="Email"
-            placeholderTextColor={theme.mutedText}
-            autoCapitalize="none"
-            autoCorrect={false}
-            autoComplete="off"
-            keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
-          />
-          <TextInput
-            style={[
-              styles.input,
-              { color: theme.text, borderColor: theme.border, backgroundColor: theme.card },
-            ]}
-            placeholder="Password"
-            placeholderTextColor={theme.mutedText}
-            secureTextEntry
-            autoComplete="off"
-            textContentType="none"
-            value={password}
-            onChangeText={setPassword}
-          />
-
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: theme.primary }]}
-            onPress={handleSignIn}
-            disabled={submitting}
-            activeOpacity={0.85}>
-            {submitting ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <ThemedText style={styles.buttonText}>Sign in</ThemedText>
-            )}
-          </TouchableOpacity>
+          <View style={{ gap: 10 }}>
+            <FringeInput
+              value={email}
+              onChange={setEmail}
+              placeholder="Email"
+              autoCapitalize="none"
+              autoComplete="off"
+              keyboardType="email-address"
+            />
+            <FringeInput
+              value={password}
+              onChange={setPassword}
+              placeholder="Password"
+              secureTextEntry
+              autoComplete="off"
+              textContentType="none"
+            />
+            <Pressable
+              onPress={() => void handleSignIn()}
+              disabled={submitting}
+              style={({ pressed }) => [
+                {
+                  paddingVertical: 15,
+                  paddingHorizontal: 20,
+                  backgroundColor: c.accent,
+                  borderRadius: 14,
+                  alignItems: 'center',
+                  marginTop: 4,
+                  ...sh.fab,
+                },
+                pressed && { transform: [{ scale: 0.985 }] },
+                submitting && { opacity: 0.7 },
+              ]}>
+              {submitting ? (
+                <ActivityIndicator color={c.accentOn} />
+              ) : (
+                <Text style={{ fontSize: 15, fontWeight: '600', color: c.accentOn }}>Sign in</Text>
+              )}
+            </Pressable>
+          </View>
 
           {formMessage ? (
-            <ThemedText style={[styles.formMessage, { color: theme.mutedText }]}>{formMessage}</ThemedText>
+            <Text style={{ marginTop: 14, textAlign: 'center', fontSize: 13, color: c.ink2 }}>{formMessage}</Text>
           ) : null}
 
-          <Link href="/(auth)/forgot-password" asChild>
-            <TouchableOpacity style={styles.forgotWrap}>
-              <ThemedText style={{ color: FringePalette.purple }}>Forgot password?</ThemedText>
-            </TouchableOpacity>
-          </Link>
-
-          <Link href="/(auth)/register" asChild>
-            <TouchableOpacity style={styles.linkWrap}>
-              <ThemedText style={{ color: FringePalette.purple }}>Create an account</ThemedText>
-            </TouchableOpacity>
-          </Link>
-
-          {!isSupabaseConfigured ? (
-            <ThemedText style={[styles.hint, { color: theme.mutedText }]}>
-              Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in .env
-            </ThemedText>
-          ) : null}
-        </View>
+          <View style={{ alignItems: 'center', marginTop: 18, gap: 12 }}>
+            <Link href="/(auth)/forgot-password" asChild>
+              <Pressable>
+                <Text style={{ fontSize: 13, color: c.accent, fontWeight: '600' }}>Forgot password?</Text>
+              </Pressable>
+            </Link>
+            <Link href="/(auth)/register" asChild>
+              <Pressable>
+                <Text style={{ fontSize: 13, color: c.ink2 }}>
+                  Don't have an account? <Text style={{ color: c.accent, fontWeight: '700' }}>Create one</Text>
+                </Text>
+              </Pressable>
+            </Link>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safe: { flex: 1 },
-  flex: { flex: 1 },
-  logoSection: {
-    paddingTop: 24,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-  },
-  inner: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 8,
-    justifyContent: 'center',
-  },
-  subtitle: { marginBottom: 32, fontSize: 15 },
-  input: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    marginBottom: 12,
-  },
-  button: {
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  formMessage: { marginTop: 12, textAlign: 'center', fontSize: 13 },
-  forgotWrap: { marginTop: 16, alignItems: 'center' },
-  linkWrap: { marginTop: 24, alignItems: 'center' },
-  hint: { marginTop: 24, fontSize: 12, textAlign: 'center' },
-});

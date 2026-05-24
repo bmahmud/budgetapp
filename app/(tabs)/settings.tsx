@@ -1,24 +1,12 @@
+import { Card } from '@/components/fringe/card';
+import { FringeInput } from '@/components/fringe/form';
+import { FringeIcon } from '@/components/fringe/icon';
+import { ScreenScroll } from '@/components/fringe/screen-scroll';
+import { Segmented } from '@/components/fringe/segmented';
 import { useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  View,
-  Image,
-  TextInput,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ThemedView } from '@/components/themed-view';
-import { ThemedText } from '@/components/themed-text';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
+import { ActivityIndicator, Alert, Image, Pressable, Text, View } from 'react-native';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'expo-router';
-import { supabase } from '@/lib/supabase';
-import { useBudgetStore } from '@/store/budget-store';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import * as ImagePicker from 'expo-image-picker';
 import {
   removeProfileAvatar,
@@ -27,13 +15,16 @@ import {
   uploadProfileAvatarFromBase64,
 } from '@/lib/profile-avatar-storage';
 import { getProfilePreferences, setProfilePreferences } from '@/lib/profile-preferences';
+import { supabase } from '@/lib/supabase';
+import { useTheme, useThemeControls } from '@/theme/ThemeContext';
+import { useBudgetStore } from '@/store/budget-store';
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { c } = useTheme();
+  const { appearance, setAppearance } = useThemeControls();
   const { session, signOut, deleteAccount } = useAuth();
   const { isInitialized, initialize, resetAllData } = useBudgetStore();
-  const colorScheme = useColorScheme() ?? 'light';
-  const theme = Colors[colorScheme];
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
   const [initials, setInitials] = useState('');
@@ -44,9 +35,7 @@ export default function SettingsScreen() {
   const bannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!isInitialized) {
-      initialize();
-    }
+    if (!isInitialized) initialize();
   }, [isInitialized, initialize]);
 
   const refreshSyncedProfile = async () => {
@@ -58,7 +47,7 @@ export default function SettingsScreen() {
     const syncedAvatarPath = latestUser?.user_metadata?.avatar_path as string | undefined;
     const syncedInitials = latestUser?.user_metadata?.initials as string | undefined;
     const resolvedSyncedAvatar = await resolveProfileAvatarUrl(syncedAvatarPath, syncedAvatar);
-    setAvatarUri((currentAvatarUri) => preferences.avatarUri || resolvedSyncedAvatar || syncedAvatar || currentAvatarUri || null);
+    setAvatarUri((current) => preferences.avatarUri || resolvedSyncedAvatar || syncedAvatar || current || null);
     setAvatarLoadFailed(false);
     setInitials((syncedInitials || preferences.initials || '').toUpperCase());
   };
@@ -70,27 +59,18 @@ export default function SettingsScreen() {
   useEffect(() => {
     if (!profileMessage) return;
     if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
-    bannerTimerRef.current = setTimeout(() => {
-      setProfileMessage(null);
-    }, 2200);
-
+    bannerTimerRef.current = setTimeout(() => setProfileMessage(null), 2200);
     return () => {
       if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
     };
   }, [profileMessage]);
 
-  const saveProfilePreferences = async (nextAvatarUri: string | null, nextInitials: string) => {
-    await setProfilePreferences({
-      avatarUri: nextAvatarUri,
-      initials: normalizeInitials(nextInitials),
-    });
-  };
-
   const normalizeInitials = (value: string) => value.trim().slice(0, 2).toUpperCase();
-  const getErrorMessage = (error: unknown) => {
-    if (error instanceof Error) return error.message;
-    if (typeof error === 'string') return error;
-    return 'Unknown error';
+  const getErrorMessage = (error: unknown) =>
+    error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown error';
+
+  const saveProfilePreferences = async (nextAvatarUri: string | null, nextInitials: string) => {
+    await setProfilePreferences({ avatarUri: nextAvatarUri, initials: normalizeInitials(nextInitials) });
   };
 
   const syncProfileMetadata = async (
@@ -98,12 +78,11 @@ export default function SettingsScreen() {
     nextInitials: string,
     nextAvatarPath: string | null,
   ) => {
-    const normalizedInitials = normalizeInitials(nextInitials);
     const { error } = await supabase.auth.updateUser({
       data: {
         avatar_url: nextAvatarUri,
         avatar_path: nextAvatarPath,
-        initials: normalizedInitials,
+        initials: normalizeInitials(nextInitials),
       },
     });
     if (error) throw error;
@@ -115,7 +94,6 @@ export default function SettingsScreen() {
       Alert.alert('Permission needed', 'Please allow photo library access to upload your profile picture.');
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
@@ -123,28 +101,22 @@ export default function SettingsScreen() {
       quality: 0.8,
       base64: true,
     });
-
     if (result.canceled || !result.assets[0]) return;
-    const selectedUri = result.assets[0].uri;
     const userId = session?.user?.id;
     if (!userId) {
       setProfileMessage('Could not upload picture. Please sign in again.');
       return;
     }
-
     const existingAvatarPath = session?.user?.user_metadata?.avatar_path as string | undefined;
-
     try {
       setAvatarLoadFailed(false);
-      setAvatarUri(selectedUri);
+      setAvatarUri(result.assets[0].uri);
       const uploaded = result.assets[0].base64
         ? await uploadProfileAvatarFromBase64(userId, result.assets[0].base64, 'image/jpeg')
-        : await uploadProfileAvatar(userId, selectedUri);
-      await saveProfilePreferences(selectedUri, initials);
+        : await uploadProfileAvatar(userId, result.assets[0].uri);
+      await saveProfilePreferences(result.assets[0].uri, initials);
       await syncProfileMetadata(uploaded.publicUrl, initials, uploaded.path);
-      if (existingAvatarPath) {
-        await removeProfileAvatar(existingAvatarPath).catch(() => undefined);
-      }
+      if (existingAvatarPath) await removeProfileAvatar(existingAvatarPath).catch(() => undefined);
       void refreshSyncedProfile();
       setProfileMessage('Profile picture updated.');
     } catch (error) {
@@ -172,9 +144,7 @@ export default function SettingsScreen() {
   const handleRemovePhoto = async () => {
     try {
       const existingAvatarPath = session?.user?.user_metadata?.avatar_path as string | undefined;
-      if (existingAvatarPath) {
-        await removeProfileAvatar(existingAvatarPath).catch(() => undefined);
-      }
+      if (existingAvatarPath) await removeProfileAvatar(existingAvatarPath).catch(() => undefined);
       setAvatarUri(null);
       setAvatarLoadFailed(false);
       await saveProfilePreferences(null, initials);
@@ -191,16 +161,13 @@ export default function SettingsScreen() {
       Alert.alert('Password required', 'Enter your password to permanently delete your account.');
       return;
     }
-
     setIsDeletingAccount(true);
     const { error } = await deleteAccount(deletePassword);
     setIsDeletingAccount(false);
-
     if (error) {
       Alert.alert('Could not delete account', error.message);
       return;
     }
-
     setShowDeleteAccount(false);
     setDeletePassword('');
     router.replace('/(auth)/login');
@@ -212,11 +179,7 @@ export default function SettingsScreen() {
       'This removes your Fringe account, all transactions, goals, categories, and profile photo. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Continue',
-          style: 'destructive',
-          onPress: () => setShowDeleteAccount(true),
-        },
+        { text: 'Continue', style: 'destructive', onPress: () => setShowDeleteAccount(true) },
       ],
     );
   };
@@ -241,356 +204,183 @@ export default function SettingsScreen() {
             })();
           },
         },
-      ]
+      ],
     );
   };
 
+  const displayInitials = initials.trim().slice(0, 2).toUpperCase() || 'U';
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
-      <ThemedView style={styles.header}>
-        <ThemedText type="title">Settings</ThemedText>
-      </ThemedView>
+    <ScreenScroll>
+      <View style={{ paddingBottom: 18 }}>
+        <Text style={{ fontSize: 12, color: c.ink3, fontWeight: '600', letterSpacing: 0.4 }}>YOU</Text>
+        <Text style={{ fontSize: 26, fontWeight: '700', color: c.ink1, letterSpacing: -0.6 }}>Settings</Text>
+      </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-        {profileMessage ? (
-          <ThemedView
-            style={[
-              styles.banner,
-              {
-                backgroundColor: `${theme.primary}14`,
-                borderColor: `${theme.primary}40`,
-              },
-            ]}>
-            <ThemedText style={{ color: theme.primary, fontWeight: '600' }}>{profileMessage}</ThemedText>
-          </ThemedView>
-        ) : null}
+      {profileMessage ? (
+        <Card pad={12} radius="md" style={{ marginBottom: 12, backgroundColor: c.accentSoft, borderColor: c.accent }}>
+          <Text style={{ color: c.accent, fontWeight: '600' }}>{profileMessage}</Text>
+        </Card>
+      ) : null}
 
-        <ThemedView style={[styles.sectionCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>
-            Profile
-          </ThemedText>
-          <View style={styles.profileRow}>
-            <View style={[styles.avatarPreview, { borderColor: theme.border }]}>
-              {avatarUri && !avatarLoadFailed ? (
-                <Image
-                  source={{ uri: avatarUri }}
-                  style={styles.avatarImage}
-                  onError={() => setAvatarLoadFailed(true)}
-                />
-              ) : (
-                <ThemedText style={[styles.avatarFallback, { color: theme.tint }]}>
-                  {(initials.trim().slice(0, 2).toUpperCase() || 'U')}
-                </ThemedText>
-              )}
-            </View>
-            <View style={styles.profileActions}>
-              <TouchableOpacity
-                style={[styles.signOutRow, { borderColor: theme.border }]}
-                onPress={() => void handlePickProfileImage()}
-                activeOpacity={0.85}>
-                <ThemedText style={{ color: theme.primary, fontWeight: '600' }}>Upload Picture</ThemedText>
-              </TouchableOpacity>
-              {avatarUri ? (
-                <TouchableOpacity
-                  style={[styles.signOutRow, { borderColor: theme.border }]}
-                  onPress={() => void handleRemovePhoto()}
-                  activeOpacity={0.85}>
-                  <ThemedText style={{ color: theme.mutedText, fontWeight: '600' }}>Remove Picture</ThemedText>
-                </TouchableOpacity>
-              ) : null}
-            </View>
-          </View>
-          <ThemedText style={[styles.infoLabel, { marginTop: 16 }]}>Initials (optional)</ThemedText>
-          <TextInput
-            style={[
-              styles.initialsInput,
-              { color: theme.text, borderColor: theme.border, backgroundColor: theme.background },
-            ]}
-            value={initials}
-            onChangeText={(value) => {
-              setInitials(value);
-              setProfileMessage(null);
-            }}
-            autoCapitalize="characters"
-            maxLength={2}
-            placeholder="e.g. BM"
-            placeholderTextColor={theme.mutedText}
-          />
-          <ThemedText style={[styles.initialsPreviewText, { color: theme.mutedText }]}>
-            Live preview: {(initials.trim().slice(0, 2).toUpperCase() || 'U')}
-          </ThemedText>
-          <TouchableOpacity
-            style={[styles.signOutRow, { borderColor: theme.border }]}
-            onPress={() => void handleInitialsSave()}
-            activeOpacity={0.85}>
-            <ThemedText style={{ color: theme.primary, fontWeight: '600' }}>Save Initials</ThemedText>
-          </TouchableOpacity>
-        </ThemedView>
-
-        <ThemedView style={[styles.sectionCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>
-            Account
-          </ThemedText>
-          <ThemedView style={[styles.infoRow, { borderBottomColor: theme.border }]}>
-            <ThemedText style={styles.infoLabel}>Signed in as</ThemedText>
-            <ThemedText style={[styles.infoValue, { flex: 1, textAlign: 'right' }]} numberOfLines={2}>
-              {session?.user?.email ?? '—'}
-            </ThemedText>
-          </ThemedView>
-          <TouchableOpacity
-            style={[styles.signOutRow, { borderColor: theme.border }]}
-            onPress={() => {
-              void signOut();
-            }}
-            activeOpacity={0.85}>
-            <ThemedText style={{ color: theme.primary, fontWeight: '600' }}>Sign out</ThemedText>
-          </TouchableOpacity>
-
-          {showDeleteAccount ? (
-            <ThemedView
-              style={[
-                styles.deleteAccountBox,
-                {
-                  borderColor: colorScheme === 'dark' ? '#9F1239' : '#FECACA',
-                  backgroundColor: colorScheme === 'dark' ? '#3F1D2B' : '#FEF2F2',
-                },
-              ]}>
-              <ThemedText style={[styles.deleteAccountWarning, { color: theme.text }]}>
-                Enter your password to confirm permanent deletion.
-              </ThemedText>
-              <TextInput
-                style={[
-                  styles.deletePasswordInput,
-                  { color: theme.text, borderColor: theme.border, backgroundColor: theme.background },
-                ]}
-                placeholder="Password"
-                placeholderTextColor={theme.mutedText}
-                secureTextEntry
-                autoComplete="off"
-                textContentType="none"
-                value={deletePassword}
-                onChangeText={setDeletePassword}
-                editable={!isDeletingAccount}
-              />
-              <TouchableOpacity
-                style={[styles.deleteConfirmButton, { backgroundColor: '#DC2626' }]}
-                onPress={() => void handleDeleteAccount()}
-                disabled={isDeletingAccount}
-                activeOpacity={0.85}>
-                {isDeletingAccount ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <ThemedText style={styles.deleteConfirmText}>Delete my account</ThemedText>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  setShowDeleteAccount(false);
-                  setDeletePassword('');
-                }}
-                disabled={isDeletingAccount}
-                activeOpacity={0.85}>
-                <ThemedText style={{ color: theme.mutedText, textAlign: 'center', marginTop: 10 }}>
-                  Cancel
-                </ThemedText>
-              </TouchableOpacity>
-            </ThemedView>
+      <Card pad={20} radius="lg" style={{ marginBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+        <View
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: 28,
+            backgroundColor: c.accent,
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden',
+          }}>
+          {avatarUri && !avatarLoadFailed ? (
+            <Image source={{ uri: avatarUri }} style={{ width: '100%', height: '100%' }} onError={() => setAvatarLoadFailed(true)} />
           ) : (
-            <TouchableOpacity
-              style={[styles.signOutRow, { borderColor: colorScheme === 'dark' ? '#9F1239' : '#FECACA', marginTop: 12 }]}
-              onPress={confirmDeleteAccount}
-              activeOpacity={0.85}>
-              <ThemedText style={{ color: '#DC2626', fontWeight: '600' }}>Delete account</ThemedText>
-            </TouchableOpacity>
+            <Text style={{ color: '#fff', fontSize: 20, fontWeight: '700' }}>{displayInitials}</Text>
           )}
-        </ThemedView>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 17, fontWeight: '700', color: c.ink1 }}>{displayInitials}</Text>
+          <Text style={{ fontSize: 12, color: c.ink3, marginTop: 2 }}>{session?.user?.email ?? '—'}</Text>
+        </View>
+      </Card>
 
-        <ThemedView style={[styles.sectionCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>
-            App Information
-          </ThemedText>
-          <ThemedView style={[styles.infoRow, { borderBottomColor: theme.border }]}>
-            <ThemedText style={styles.infoLabel}>Version</ThemedText>
-            <ThemedText style={styles.infoValue}>1.0.1</ThemedText>
-          </ThemedView>
-          <ThemedView style={[styles.infoRow, { borderBottomColor: theme.border }]}>
-            <ThemedText style={styles.infoLabel}>Theme</ThemedText>
-            <ThemedText style={styles.infoValue}>
-              {colorScheme === 'dark' ? 'Vibrant · Dark' : 'Vibrant'}
-            </ThemedText>
-          </ThemedView>
-        </ThemedView>
+      <Text style={{ fontSize: 11, fontWeight: '600', color: c.ink3, letterSpacing: 0.4, paddingHorizontal: 4, paddingBottom: 8 }}>
+        PROFILE
+      </Text>
+      <Card pad={16} radius="lg" style={{ marginBottom: 16, gap: 10 }}>
+        <Pressable onPress={() => void handlePickProfileImage()} style={{ paddingVertical: 10, alignItems: 'center' }}>
+          <Text style={{ color: c.accent, fontWeight: '600' }}>Upload picture</Text>
+        </Pressable>
+        {avatarUri ? (
+          <Pressable onPress={() => void handleRemovePhoto()} style={{ paddingVertical: 10, alignItems: 'center' }}>
+            <Text style={{ color: c.ink2, fontWeight: '600' }}>Remove picture</Text>
+          </Pressable>
+        ) : null}
+        <FringeInput value={initials} onChange={setInitials} placeholder="Initials (e.g. BM)" autoCapitalize="characters" maxLength={2} />
+        <Pressable onPress={() => void handleInitialsSave()} style={{ paddingVertical: 10, alignItems: 'center' }}>
+          <Text style={{ color: c.accent, fontWeight: '600' }}>Save initials</Text>
+        </Pressable>
+      </Card>
 
-        <ThemedView style={[styles.sectionCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>
-            Data Management
-          </ThemedText>
-          <TouchableOpacity
-            style={[styles.resetBox, { backgroundColor: colorScheme === 'dark' ? '#3F1D2B' : '#FEE2E2', borderColor: colorScheme === 'dark' ? '#9F1239' : '#FECACA' }]}
-            onPress={handleReset}
-            activeOpacity={0.85}>
-            <View style={styles.settingLeft}>
-              <IconSymbol name="trash.fill" size={24} color="#DC2626" />
-              <ThemedText style={styles.settingLabel}>Reset All Data</ThemedText>
-            </View>
-            <IconSymbol name="chevron.right" size={20} color={theme.mutedText} />
-          </TouchableOpacity>
-        </ThemedView>
+      <Text style={{ fontSize: 11, fontWeight: '600', color: c.ink3, letterSpacing: 0.4, paddingHorizontal: 4, paddingBottom: 8 }}>
+        PREFERENCES
+      </Text>
+      <Card pad={0} radius="lg" style={{ marginBottom: 16 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+            paddingHorizontal: 16,
+            paddingVertical: 14,
+          }}>
+          <View
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              backgroundColor: c.bgSubtle,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+            <FringeIcon name={appearance === 'light' ? 'sun' : 'moon'} size={16} color={c.ink2} strokeWidth={2} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: c.ink1 }}>Appearance</Text>
+            <Text style={{ fontSize: 12, color: c.ink3, marginTop: 1 }}>
+              {appearance === 'light' ? 'Light' : 'Dark'} mode
+            </Text>
+          </View>
+        </View>
+        <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
+          <Segmented
+            options={[
+              { value: 'light', label: 'Light' },
+              { value: 'dark', label: 'Dark' },
+            ]}
+            value={appearance}
+            onChange={setAppearance}
+            fullWidth
+          />
+        </View>
+      </Card>
 
-        <ThemedView style={[styles.sectionCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>
-            About
-          </ThemedText>
-          <ThemedText style={[styles.aboutText, { color: theme.mutedText }]}>
-            Fringe helps you track your income and expenses, set financial goals, and gain insights into
-            your spending habits.
-          </ThemedText>
-        </ThemedView>
-      </ScrollView>
-    </SafeAreaView>
+      <Text style={{ fontSize: 11, fontWeight: '600', color: c.ink3, letterSpacing: 0.4, paddingHorizontal: 4, paddingBottom: 8 }}>
+        ACCOUNT
+      </Text>
+      <Card pad={0} radius="lg" style={{ marginBottom: 16 }}>
+        <Pressable onPress={() => void signOut()} style={{ paddingVertical: 14, alignItems: 'center' }}>
+          <Text style={{ fontSize: 14, fontWeight: '600', color: c.accent }}>Sign out</Text>
+        </Pressable>
+      </Card>
+
+      <Text style={{ fontSize: 11, fontWeight: '600', color: c.ink3, letterSpacing: 0.4, paddingHorizontal: 4, paddingBottom: 8 }}>
+        DATA
+      </Text>
+      <Card pad={0} radius="lg" style={{ marginBottom: 16 }}>
+        <Pressable onPress={handleReset} style={{ paddingVertical: 14, alignItems: 'center' }}>
+          <Text style={{ fontSize: 14, fontWeight: '600', color: c.negative }}>Reset all data</Text>
+        </Pressable>
+      </Card>
+
+      <Text style={{ fontSize: 11, fontWeight: '600', color: c.ink3, letterSpacing: 0.4, paddingHorizontal: 4, paddingBottom: 8 }}>
+        DANGER ZONE
+      </Text>
+      {showDeleteAccount ? (
+        <Card pad={16} radius="lg" style={{ marginBottom: 16, borderColor: c.negativeSoft }}>
+          <Text style={{ fontSize: 14, color: c.ink1, marginBottom: 10 }}>
+            Enter your password to confirm permanent deletion.
+          </Text>
+          <FringeInput
+            value={deletePassword}
+            onChange={setDeletePassword}
+            placeholder="Password"
+            secureTextEntry
+            autoComplete="off"
+            textContentType="none"
+            editable={!isDeletingAccount}
+          />
+          <Pressable
+            onPress={() => void handleDeleteAccount()}
+            disabled={isDeletingAccount}
+            style={{
+              marginTop: 10,
+              paddingVertical: 14,
+              borderRadius: 10,
+              backgroundColor: c.negative,
+              alignItems: 'center',
+            }}>
+            {isDeletingAccount ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={{ color: '#fff', fontWeight: '600' }}>Delete my account</Text>
+            )}
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              setShowDeleteAccount(false);
+              setDeletePassword('');
+            }}
+            disabled={isDeletingAccount}
+            style={{ marginTop: 10, alignItems: 'center' }}>
+            <Text style={{ color: c.ink3 }}>Cancel</Text>
+          </Pressable>
+        </Card>
+      ) : (
+        <Card pad={0} radius="lg" style={{ marginBottom: 16 }}>
+          <Pressable onPress={confirmDeleteAccount} style={{ paddingVertical: 14, alignItems: 'center' }}>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: c.negative }}>Delete account</Text>
+          </Pressable>
+        </Card>
+      )}
+
+      <Card pad={16} radius="lg">
+        <Text style={{ fontSize: 14, color: c.ink2, lineHeight: 20 }}>
+          Fringe helps you track income and expenses, set goals, and understand your spending. Version 1.0.1
+        </Text>
+      </Card>
+    </ScreenScroll>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    padding: 16,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  banner: {
-    marginBottom: 12,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  sectionCard: {
-    marginBottom: 16,
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  sectionTitle: {
-    marginBottom: 16,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  infoLabel: {
-    fontSize: 16,
-  },
-  infoValue: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  signOutRow: {
-    marginTop: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  resetBox: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  settingLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  settingLabel: {
-    fontSize: 16,
-  },
-  aboutText: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  profileRow: {
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'center',
-  },
-  avatarPreview: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-  },
-  avatarFallback: {
-    fontSize: 26,
-    fontWeight: '700',
-  },
-  profileActions: {
-    flex: 1,
-    gap: 8,
-  },
-  initialsInput: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    marginTop: 8,
-    marginBottom: 6,
-  },
-  initialsPreviewText: {
-    fontSize: 12,
-    marginBottom: 10,
-  },
-  deleteAccountBox: {
-    marginTop: 12,
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  deleteAccountWarning: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 10,
-  },
-  deletePasswordInput: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    marginBottom: 10,
-  },
-  deleteConfirmButton: {
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  deleteConfirmText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
-

@@ -1,41 +1,48 @@
-import { useState } from 'react';
-import { StyleSheet, View, TextInput, TouchableOpacity, Switch, Alert } from 'react-native';
-import { ThemedText } from './themed-text';
-import { ThemedView } from './themed-view';
-import { IconSymbol } from './ui/icon-symbol';
-import { DatePicker } from './date-picker';
-import { Transaction, Category } from '@/types';
+import { Card } from '@/components/fringe/card';
+import { CategoryIcon } from '@/components/fringe/category-icon';
+import { FringeIcon } from '@/components/fringe/icon';
+import { FringeInput, Label, Toggle } from '@/components/fringe/form';
+import { Segmented } from '@/components/fringe/segmented';
+import { DatePicker } from '@/components/date-picker';
+import { useTheme } from '@/theme/ThemeContext';
+import { Category, Transaction } from '@/types';
 import { format } from 'date-fns';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
+import { useState } from 'react';
+import { Alert, Pressable, Text, TextInput, View } from 'react-native';
 
 interface TransactionFormProps {
   categories: Category[];
   initialData?: Partial<Transaction>;
   onSubmit: (data: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>) => void | Promise<void>;
   onCancel: () => void;
+  title?: string;
+  showHeader?: boolean;
 }
 
-export function TransactionForm({ categories, initialData, onSubmit, onCancel }: TransactionFormProps) {
-  const colorScheme = useColorScheme() ?? 'light';
-  const theme = Colors[colorScheme];
+export function TransactionForm({
+  categories,
+  initialData,
+  onSubmit,
+  onCancel,
+  title = 'New transaction',
+  showHeader = true,
+}: TransactionFormProps) {
+  const { c, sh } = useTheme();
   const [amount, setAmount] = useState(initialData?.amount?.toString() || '');
-  const [date, setDate] = useState(
-    initialData?.date || format(new Date(), 'yyyy-MM-dd')
-  );
+  const [description, setDescription] = useState(initialData?.notes || '');
+  const [date, setDate] = useState(initialData?.date || format(new Date(), 'yyyy-MM-dd'));
   const [categoryId, setCategoryId] = useState(initialData?.categoryId || '');
-  const [notes, setNotes] = useState(initialData?.notes || '');
+  const [notes, setNotes] = useState('');
   const [type, setType] = useState<'income' | 'expense'>(initialData?.type || 'expense');
   const [isRecurring, setIsRecurring] = useState(initialData?.isRecurring || false);
 
-  const textColor = theme.text;
-  const borderColor = theme.border;
-
-  const filteredCategories = categories.filter((c) => {
-    // For income, show income categories; for expense, show expense categories
-    // This is a simple heuristic - you might want to add a category type field
-    return true; // Show all for now
+  const filteredCategories = categories.filter((cat) => {
+    if (type === 'income') return /salary|income|pay/i.test(cat.name);
+    return !/salary|income|pay/i.test(cat.name);
   });
+  const displayCategories = filteredCategories.length > 0 ? filteredCategories : categories;
+
+  const valid = parseFloat(amount) > 0 && categoryId.length > 0;
 
   const handleSubmit = async () => {
     const amountNum = parseFloat(amount);
@@ -48,7 +55,6 @@ export function TransactionForm({ categories, initialData, onSubmit, onCancel }:
       return;
     }
 
-    // Validate date format
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(date)) {
       Alert.alert('Error', 'Please enter a valid date in YYYY-MM-DD format');
@@ -59,7 +65,7 @@ export function TransactionForm({ categories, initialData, onSubmit, onCancel }:
       amount: amountNum,
       date,
       categoryId,
-      notes: notes.trim() || undefined,
+      notes: (description.trim() || notes.trim()) || undefined,
       type,
       isRecurring,
       recurringFrequency: isRecurring ? 'monthly' : undefined,
@@ -67,223 +73,169 @@ export function TransactionForm({ categories, initialData, onSubmit, onCancel }:
   };
 
   return (
-    <ThemedView style={styles.container}>
-      <ThemedView style={styles.header}>
-        <ThemedText type="title">Add Transaction</ThemedText>
-        <TouchableOpacity onPress={onCancel}>
-          <IconSymbol name="xmark.circle.fill" size={24} color="#999" />
-        </TouchableOpacity>
-      </ThemedView>
+    <View style={{ paddingHorizontal: 16, paddingTop: showHeader ? 8 : 0, paddingBottom: 32 }}>
+      {showHeader ? (
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <Text style={{ fontSize: 26, fontWeight: '700', color: c.ink1, letterSpacing: -0.6 }}>{title}</Text>
+          <Pressable
+            onPress={onCancel}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              backgroundColor: c.bgSubtle,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+            <FringeIcon name="close" size={16} color={c.ink2} strokeWidth={2.4} />
+          </Pressable>
+        </View>
+      ) : null}
 
-      <View style={styles.typeSelector}>
-        <TouchableOpacity
-          style={[
-            styles.typeButton,
-            { borderColor },
-            type === 'income' && { borderColor: theme.primary, backgroundColor: `${theme.primary}22` },
+      <View style={{ marginBottom: 18, alignItems: 'flex-start' }}>
+        <Segmented
+          options={[
+            { value: 'expense', label: 'Expense' },
+            { value: 'income', label: 'Income' },
           ]}
-          onPress={() => setType('income')}>
-          <ThemedText style={[styles.typeButtonText, type === 'income' && { color: theme.primary, fontWeight: '700' }]}>
-            Income
-          </ThemedText>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.typeButton,
-            { borderColor },
-            type === 'expense' && { borderColor: theme.primary, backgroundColor: `${theme.primary}22` },
-          ]}
-          onPress={() => setType('expense')}>
-          <ThemedText style={[styles.typeButtonText, type === 'expense' && { color: theme.primary, fontWeight: '700' }]}>
-            Expense
-          </ThemedText>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.inputGroup}>
-        <ThemedText style={styles.label}>Amount</ThemedText>
-        <TextInput
-          style={[styles.input, { borderColor, color: textColor }]}
-          value={amount}
-          onChangeText={setAmount}
-          placeholder="0.00"
-          keyboardType="decimal-pad"
-          placeholderTextColor="#999"
+          value={type}
+          onChange={(v) => {
+            setType(v);
+            setCategoryId('');
+          }}
         />
       </View>
 
-      <View style={styles.inputGroup}>
-        <ThemedText style={styles.label}>Date</ThemedText>
-        <DatePicker
-          value={date}
-          onChange={setDate}
-          placeholder="mm / dd / yyyy"
-          borderColor={borderColor}
-        />
-      </View>
-
-      <View style={styles.inputGroup}>
-        <ThemedText style={styles.label}>Category</ThemedText>
-        <View style={styles.categoryGrid}>
-          {filteredCategories.map((category) => (
-            <TouchableOpacity
-              key={category.id}
-              style={[
-                styles.categoryButton,
-                { borderColor },
-                categoryId === category.id && {
-                  borderColor: theme.primary,
-                  backgroundColor: `${theme.primary}18`,
-                },
-              ]}
-              onPress={() => setCategoryId(category.id)}>
-              <View style={[styles.categoryIcon, { backgroundColor: `${category.color}20` }]}>
-                <IconSymbol name={category.icon} size={20} color={category.color} />
-              </View>
-              <ThemedText
-                style={[
-                  styles.categoryName,
-                  categoryId === category.id && styles.categoryNameActive,
-                ]}>
-                {category.name}
-              </ThemedText>
-            </TouchableOpacity>
-          ))}
+      <View style={{ alignItems: 'center', paddingVertical: 24 }}>
+        <Text style={{ fontSize: 11, color: c.ink3, fontWeight: '600', letterSpacing: 0.4, marginBottom: 6 }}>
+          AMOUNT
+        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+          <Text
+            style={{
+              fontSize: 36,
+              opacity: 0.45,
+              marginRight: 4,
+              color: type === 'income' ? c.positive : c.ink1,
+              fontWeight: '700',
+            }}>
+            {type === 'income' ? '+' : '−'}
+          </Text>
+          <Text
+            style={{
+              fontSize: 36,
+              opacity: 0.45,
+              marginRight: 2,
+              color: type === 'income' ? c.positive : c.ink1,
+              fontWeight: '700',
+            }}>
+            $
+          </Text>
+          <TextInput
+            value={amount}
+            onChangeText={(v) => setAmount(v.replace(/[^0-9.]/g, ''))}
+            placeholder="0"
+            placeholderTextColor={(type === 'income' ? c.positive : c.ink1) + '55'}
+            keyboardType="decimal-pad"
+            style={{
+              minWidth: 60,
+              fontSize: 56,
+              fontWeight: '700',
+              letterSpacing: -1.8,
+              color: type === 'income' ? c.positive : c.ink1,
+              fontVariant: ['tabular-nums'],
+              padding: 0,
+            }}
+          />
         </View>
       </View>
 
-      <View style={styles.inputGroup}>
-        <ThemedText style={styles.label}>Notes (optional)</ThemedText>
-        <TextInput
-          style={[styles.input, styles.textArea, { borderColor, color: textColor }]}
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Add a note..."
-          multiline
-          numberOfLines={3}
-          placeholderTextColor="#999"
-        />
+      <View style={{ marginBottom: 14 }}>
+        <Label>Description</Label>
+        <FringeInput value={description} onChange={setDescription} placeholder="What was it for?" />
       </View>
 
-      <View style={styles.switchGroup}>
-        <ThemedText style={styles.label}>Recurring Transaction</ThemedText>
-        <Switch value={isRecurring} onValueChange={setIsRecurring} />
+      <View style={{ marginBottom: 18 }}>
+        <Label>Date</Label>
+        <DatePicker value={date} onChange={setDate} placeholder="mm / dd / yyyy" borderColor={c.line} />
       </View>
 
-      <View style={styles.buttonGroup}>
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: theme.border }]}
-          onPress={onCancel}>
-          <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: theme.primary }]}
-          onPress={handleSubmit}>
-          <ThemedText style={styles.submitButtonText}>Save</ThemedText>
-        </TouchableOpacity>
+      <Label>Category</Label>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4, marginBottom: 18 }}>
+        {displayCategories.map((category) => {
+          const active = categoryId === category.id;
+          return (
+            <View key={category.id} style={{ width: '25%', padding: 4 }}>
+              <Pressable
+                onPress={() => setCategoryId(category.id)}
+                style={{
+                  alignItems: 'center',
+                  gap: 6,
+                  paddingVertical: 14,
+                  paddingHorizontal: 6,
+                  backgroundColor: active ? `${category.color}18` : c.bgElev,
+                  borderWidth: active ? 1.5 : 1,
+                  borderColor: active ? category.color : c.line,
+                  borderRadius: 14,
+                }}>
+                <CategoryIcon category={category} size={32} />
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    fontSize: 10.5,
+                    fontWeight: '600',
+                    color: active ? category.color : c.ink2,
+                    textAlign: 'center',
+                  }}>
+                  {category.name}
+                </Text>
+              </Pressable>
+            </View>
+          );
+        })}
       </View>
-    </ThemedView>
+
+      <Card tone="subtle" pad={14} radius="md" style={{ marginBottom: 18 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                backgroundColor: c.accentSoft,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+              <FringeIcon name="refresh" size={16} color={c.accent} strokeWidth={2.2} />
+            </View>
+            <View>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: c.ink1 }}>Recurring</Text>
+              <Text style={{ fontSize: 12, color: c.ink3 }}>Repeats monthly</Text>
+            </View>
+          </View>
+          <Toggle checked={isRecurring} onChange={setIsRecurring} />
+        </View>
+      </Card>
+
+      <Pressable
+        onPress={() => void handleSubmit()}
+        disabled={!valid}
+        style={({ pressed }) => [
+          {
+            paddingVertical: 15,
+            paddingHorizontal: 20,
+            backgroundColor: valid ? c.accent : c.bgSubtle,
+            borderRadius: 14,
+            alignItems: 'center',
+            ...(valid ? sh.fab : {}),
+          },
+          pressed && valid && { transform: [{ scale: 0.985 }] },
+        ]}>
+        <Text style={{ fontSize: 15, fontWeight: '600', color: valid ? c.accentOn : c.ink3 }}>
+          {initialData ? 'Save changes' : 'Add transaction'}
+        </Text>
+      </Pressable>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  typeSelector: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
-  },
-  typeButton: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
-    alignItems: 'center',
-  },
-  typeButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-  },
-  textArea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  categoryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  categoryButton: {
-    width: '30%',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  categoryIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  categoryName: {
-    fontSize: 12,
-    textAlign: 'center',
-  },
-  categoryNameActive: {
-    fontWeight: '600',
-  },
-  switchGroup: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  buttonGroup: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  button: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  submitButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-  },
-});
-

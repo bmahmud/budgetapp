@@ -1,33 +1,31 @@
+import { Card } from '@/components/fringe/card';
+import { FringeIcon } from '@/components/fringe/icon';
+import { ProgressBar } from '@/components/fringe/progress-bar';
+import { ScreenScroll } from '@/components/fringe/screen-scroll';
+import { SectionHeader } from '@/components/fringe/section-header';
 import { DatePicker } from '@/components/date-picker';
 import { GoalCard } from '@/components/goal-card';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, FringePalette } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/theme/ThemeContext';
 import { useBudgetStore } from '@/store/budget-store';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Dimensions, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-const GOAL_COLORS = [
-  FringePalette.teal,
-  FringePalette.purple,
-  FringePalette.purpleLight,
-  FringePalette.income,
-  '#F59E0B',
-  FringePalette.expense,
-  '#3B82F6',
-];
-
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - 32 - 12) / 2; // Screen width minus padding and gap, divided by 2
+const GOAL_COLORS = ['#9FE1CB', '#5546E0', '#6A61C8', '#197B5A', '#F59E0B', '#B0413F', '#3B82F6'];
 
 export default function GoalsScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme() ?? 'light';
-  const theme = Colors[colorScheme];
+  const { c } = useTheme();
+  const theme = {
+    text: c.ink1,
+    border: c.line,
+    primary: c.accent,
+    card: c.bgElev,
+    background: c.bgBase,
+    mutedText: c.ink3,
+    tint: c.accent,
+  };
   const { goals, addGoal, isLoading, isInitialized, initialize } = useBudgetStore();
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState('');
@@ -113,40 +111,89 @@ export default function GoalsScreen() {
     setShowModal(false);
   };
 
+  const totalSaved = goals.reduce((s, g) => s + g.currentAmount, 0);
+  const totalTarget = goals.reduce((s, g) => s + g.targetAmount, 0);
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
-      {/* Header */}
-      <ThemedView style={styles.header}>
-        <ThemedText type="title">Financial Goals</ThemedText>
-        <TouchableOpacity
-          style={[styles.addButton, { backgroundColor: theme.primary }]}
-          onPress={() => setShowModal(true)}>
-          <ThemedText style={styles.addButtonText}>Add Goal</ThemedText>
-        </TouchableOpacity>
-      </ThemedView>
+    <ScreenScroll>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'baseline',
+          justifyContent: 'space-between',
+          paddingBottom: 18,
+        }}>
+        <View>
+          <Text style={{ fontSize: 12, color: c.ink3, fontWeight: '600', letterSpacing: 0.4 }}>FUTURE</Text>
+          <Text style={{ fontSize: 26, fontWeight: '700', color: c.ink1, letterSpacing: -0.6 }}>Goals</Text>
+        </View>
+        <Pressable
+          onPress={() => setShowModal(true)}
+          style={{
+            backgroundColor: c.ink1,
+            paddingHorizontal: 16,
+            paddingVertical: 10,
+            paddingLeft: 12,
+            borderRadius: 999,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+          }}>
+          <FringeIcon name="plus" size={16} color={c.bgElev} strokeWidth={2.4} />
+          <Text style={{ fontSize: 13, fontWeight: '600', color: c.bgElev }}>New goal</Text>
+        </Pressable>
+      </View>
+
+      {goals.length > 0 ? (
+        <Card pad={20} radius="xl" tone="accent" style={{ marginBottom: 18, borderColor: c.accent }}>
+          <Text style={{ fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.7)', letterSpacing: 0.4 }}>
+            TOTAL SAVED ACROSS GOALS
+          </Text>
+          <Text
+            style={{
+              fontSize: 38,
+              fontWeight: '700',
+              letterSpacing: -1.2,
+              color: '#fff',
+              marginTop: 6,
+              fontVariant: ['tabular-nums'],
+            }}>
+            ${Math.round(totalSaved).toLocaleString()}
+          </Text>
+          <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>
+            of <Text style={{ color: '#fff', fontWeight: '700' }}>${Math.round(totalTarget).toLocaleString()}</Text> target
+          </Text>
+          <View style={{ marginTop: 14 }}>
+            <ProgressBar
+              value={totalSaved}
+              max={totalTarget || 1}
+              color="rgba(255,255,255,0.95)"
+              bg="rgba(255,255,255,0.2)"
+              height={6}
+            />
+          </View>
+        </Card>
+      ) : null}
 
       {isLoading ? (
-        <ThemedView style={styles.loadingContainer}>
-          <ThemedText>Loading...</ThemedText>
-        </ThemedView>
+        <Text style={{ marginTop: 24, textAlign: 'center', color: c.ink3 }}>Loading...</Text>
       ) : goals.length === 0 ? (
-        <ThemedView style={styles.emptyState}>
-          <IconSymbol name="target" size={64} color="#999" />
-          <ThemedText style={styles.emptyText}>No goals yet</ThemedText>
-          <ThemedText style={styles.emptySubtext}>Create a goal to start tracking your progress</ThemedText>
-        </ThemedView>
+        <Card pad={24} radius="lg" style={{ alignItems: 'center' }}>
+          <IconSymbol name="target" size={48} color={c.ink3} />
+          <Text style={{ fontSize: 16, fontWeight: '700', color: c.ink1, marginTop: 12 }}>No goals yet</Text>
+          <Text style={{ fontSize: 13, color: c.ink2, marginTop: 6, textAlign: 'center' }}>
+            Create a goal to start tracking your progress
+          </Text>
+        </Card>
       ) : (
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.listContent}>
-          <View style={styles.goalsGrid}>
+        <>
+          <SectionHeader title="Your goals" />
+          <View style={{ gap: 10 }}>
             {goals.map((goal) => (
-              <GoalCard
-                key={goal.id}
-                goal={goal}
-                onPress={() => router.push(`/goals/${goal.id}`)}
-              />
+              <GoalCard key={goal.id} goal={goal} onPress={() => router.push(`/goals/${goal.id}`)} />
             ))}
           </View>
-        </ScrollView>
+        </>
       )}
 
       {/* Create Goal Modal */}
@@ -163,7 +210,7 @@ export default function GoalsScreen() {
                   <View style={[styles.modalIcon, { backgroundColor: `${selectedColor}20` }]}>
                     <IconSymbol name="target" size={24} color={selectedColor} />
                   </View>
-                  <ThemedText type="title" style={styles.modalTitle}>Create New Goal</ThemedText>
+                  <Text style={[styles.modalTitle, { color: c.ink1 }]}>Create New Goal</Text>
                 </View>
                 <TouchableOpacity onPress={handleCancel}>
                   <IconSymbol name="xmark.circle.fill" size={24} color="#999" />
@@ -177,7 +224,7 @@ export default function GoalsScreen() {
                 keyboardShouldPersistTaps="handled">
               {/* Goal Name */}
               <View style={styles.inputGroup}>
-                <ThemedText style={styles.label}>Goal Name</ThemedText>
+                <Text style={[styles.label, { color: c.ink2 }]}>Goal Name</Text>
                 <TextInput
                   style={[
                     styles.input,
@@ -195,7 +242,7 @@ export default function GoalsScreen() {
 
               {/* Target Amount */}
               <View style={styles.inputGroup}>
-                <ThemedText style={styles.label}>Target Amount</ThemedText>
+                <Text style={[styles.label, { color: c.ink2 }]}>Target Amount</Text>
                 <View style={styles.amountContainer}>
                   <TextInput
                     style={[
@@ -227,7 +274,7 @@ export default function GoalsScreen() {
 
               {/* Already Saved */}
               <View style={styles.inputGroup}>
-                <ThemedText style={styles.label}>Already Saved (optional)</ThemedText>
+                <Text style={[styles.label, { color: c.ink2 }]}>Already Saved (optional)</Text>
                 <View style={styles.amountContainer}>
                   <TextInput
                     style={[
@@ -259,7 +306,7 @@ export default function GoalsScreen() {
 
               {/* Target Date */}
               <View style={styles.inputGroup}>
-                <ThemedText style={styles.label}>Target Date</ThemedText>
+                <Text style={[styles.label, { color: c.ink2 }]}>Target Date</Text>
                 <DatePicker
                   value={targetDate}
                   onChange={setTargetDate}
@@ -270,7 +317,7 @@ export default function GoalsScreen() {
 
               {/* Color Selection */}
               <View style={styles.inputGroup}>
-                <ThemedText style={styles.label}>Color</ThemedText>
+                <Text style={[styles.label, { color: c.ink2 }]}>Color</Text>
                 <View style={styles.colorGrid}>
                   {GOAL_COLORS.map((color, index) => (
                     <TouchableOpacity
@@ -295,19 +342,19 @@ export default function GoalsScreen() {
                 <TouchableOpacity
                   style={[styles.modalButton, styles.cancelButton, { backgroundColor: theme.border }]}
                   onPress={handleCancel}>
-                  <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modalButton, styles.createButton, { backgroundColor: theme.primary }]}
                   onPress={handleCreateGoal}>
-                  <ThemedText style={styles.createButtonText}>Create Goal</ThemedText>
+                  <Text style={styles.createButtonText}>Create Goal</Text>
                 </TouchableOpacity>
               </View>
             </View>
           </KeyboardAvoidingView>
         </View>
       </Modal>
-    </SafeAreaView>
+    </ScreenScroll>
   );
 }
 

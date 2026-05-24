@@ -1,10 +1,8 @@
-import { StyleSheet, View } from 'react-native';
-import { ThemedText } from './themed-text';
-import { ThemedView } from './themed-view';
-import { IconSymbol } from './ui/icon-symbol';
+import { Card } from '@/components/fringe/card';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useTheme } from '@/theme/ThemeContext';
 import { SummaryMetrics } from '@/types';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors, FringePalette } from '@/constants/theme';
+import { Text, View } from 'react-native';
 
 interface SummaryCardProps {
   title: string;
@@ -15,31 +13,29 @@ interface SummaryCardProps {
 }
 
 function SummaryCard({ title, value, icon, color, isPositive }: SummaryCardProps) {
-  const colorScheme = useColorScheme();
+  const { c } = useTheme();
   const valueColor =
-    isPositive !== undefined
-      ? isPositive
-        ? FringePalette.income
-        : FringePalette.expense
-      : Colors[colorScheme ?? 'light'].text;
+    isPositive !== undefined ? (isPositive ? c.positive : c.negative) : c.ink1;
 
   return (
-    <ThemedView
-      style={[
-        styles.card,
-        {
-          backgroundColor: Colors[colorScheme ?? 'light'].card,
-          borderColor: Colors[colorScheme ?? 'light'].border,
-        },
-      ]}>
-      <View style={[styles.iconContainer, { backgroundColor: `${color}20` }]}>
-        <IconSymbol name={icon} size={24} color={color} />
+    <Card pad={14} radius="lg" style={{ flex: 1, alignItems: 'center' }}>
+      <View
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          backgroundColor: `${color}22`,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: 8,
+        }}>
+        <IconSymbol name={icon as never} size={22} color={color} />
       </View>
-      <ThemedText style={styles.title}>{title}</ThemedText>
-      <ThemedText type="title" style={[styles.value, { color: valueColor }]}>
+      <Text style={{ fontSize: 11, fontWeight: '600', color: c.ink3, marginBottom: 4 }}>{title}</Text>
+      <Text style={{ fontSize: 18, fontWeight: '700', color: valueColor }}>
         ${Math.round(Math.abs(value)).toLocaleString()}
-      </ThemedText>
-    </ThemedView>
+      </Text>
+    </Card>
   );
 }
 
@@ -48,62 +44,31 @@ interface SummaryCardsProps {
 }
 
 export function SummaryCards({ metrics }: SummaryCardsProps) {
+  const { c } = useTheme();
+
   return (
-    <View style={styles.container}>
+    <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
       <SummaryCard
         title="Income"
         value={metrics.totalIncome}
         icon="arrow.down.circle.fill"
-        color={FringePalette.income}
+        color={c.positive}
         isPositive
       />
       <SummaryCard
         title="Expenses"
         value={metrics.totalExpenses}
         icon="arrow.up.circle.fill"
-        color={FringePalette.expense}
+        color={c.negative}
         isPositive={false}
       />
       <SummaryCard
         title="Balance"
         value={metrics.netBalance}
         icon="dollarsign.circle.fill"
-        color={metrics.netBalance >= 0 ? FringePalette.income : FringePalette.expense}
+        color={metrics.netBalance >= 0 ? c.positive : c.negative}
         isPositive={metrics.netBalance >= 0}
       />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
-  },
-  card: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 12,
-    opacity: 0.7,
-    marginBottom: 4,
-  },
-  value: {
-    fontSize: 20,
-    fontWeight: '700',
-  },
-});
-

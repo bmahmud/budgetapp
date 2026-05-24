@@ -1,174 +1,186 @@
-import { useEffect, useState } from 'react';
-import { StyleSheet, FlatList, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ThemedView } from '@/components/themed-view';
-import { ThemedText } from '@/components/themed-text';
-import { TransactionCard } from '@/components/transaction-card';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Card } from '@/components/fringe/card';
+import { EmptyState } from '@/components/fringe/empty-state';
+import { FringeIcon } from '@/components/fringe/icon';
+import { IconButton } from '@/components/fringe/icon-button';
+import { ScreenScroll } from '@/components/fringe/screen-scroll';
+import { Segmented } from '@/components/fringe/segmented';
+import { FringeTransactionRow } from '@/components/fringe/transaction-row';
+import { relativeDay } from '@/lib/date-helpers';
+import { useTheme } from '@/theme/ThemeContext';
 import { useBudgetStore } from '@/store/budget-store';
 import { useRouter } from 'expo-router';
-import { Transaction } from '@/types';
+import { useEffect, useMemo, useState } from 'react';
+import { Text, TextInput, View } from 'react-native';
+
+type Filter = 'all' | 'income' | 'expense';
 
 export default function TransactionsScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme() ?? 'light';
-  const theme = Colors[colorScheme];
+  const { c } = useTheme();
   const { transactions, categories, isLoading, isInitialized, initialize } = useBudgetStore();
-  const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
+  const [filter, setFilter] = useState<Filter>('all');
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
-    if (!isInitialized) {
-      initialize();
-    }
+    if (!isInitialized) initialize();
   }, [isInitialized, initialize]);
 
-  const filteredTransactions = transactions.filter((t) => {
-    if (filter === 'all') return true;
-    return t.type === filter;
-  });
+  const filtered = useMemo(() => {
+    let rows = [...transactions].sort((a, b) => b.date.localeCompare(a.date));
+    if (filter === 'income') rows = rows.filter((t) => t.type === 'income');
+    if (filter === 'expense') rows = rows.filter((t) => t.type === 'expense');
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      rows = rows.filter((t) => {
+        const cat = categories.find((c) => c.id === t.categoryId);
+        const label = (t.notes || cat?.name || '').toLowerCase();
+        return label.includes(q) || cat?.name.toLowerCase().includes(q);
+      });
+    }
+    return rows;
+  }, [transactions, filter, search, categories]);
 
-  const getCategoryById = (id: string) => categories.find((c) => c.id === id);
+  const groups = useMemo(() => {
+    const map = new Map<string, typeof filtered>();
+    filtered.forEach((t) => {
+      const key = relativeDay(t.date);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(t);
+    });
+    return [...map.entries()];
+  }, [filtered]);
 
-  const renderTransaction = ({ item }: { item: Transaction }) => (
-    <TransactionCard
-      transaction={item}
-      category={getCategoryById(item.categoryId)}
-      onPress={() => router.push(`/transactions/${item.id}`)}
-    />
-  );
+  const totalIn = filtered.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const totalOut = filtered.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const getCategory = (id: string) => categories.find((cat) => cat.id === id);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
-      <ThemedView style={styles.header}>
-        <ThemedText type="title">Transactions</ThemedText>
-        <TouchableOpacity onPress={() => router.push('/transactions/add')}>
-          <IconSymbol name="plus.circle.fill" size={28} color={theme.primary} />
-        </TouchableOpacity>
-      </ThemedView>
+    <ScreenScroll>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'baseline',
+          justifyContent: 'space-between',
+          paddingBottom: 16,
+        }}>
+        <View>
+          <Text style={{ fontSize: 12, color: c.ink3, fontWeight: '600', letterSpacing: 0.4 }}>ACTIVITY</Text>
+          <Text style={{ fontSize: 26, fontWeight: '700', color: c.ink1, letterSpacing: -0.6 }}>All transactions</Text>
+        </View>
+        <IconButton icon="filter" size={40} tone="elev" />
+      </View>
 
-      <View style={styles.filterContainer}>
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            { borderColor: theme.border },
-            filter === 'all' && [styles.filterButtonActive, { backgroundColor: `${theme.tint}14`, borderColor: theme.tint }],
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+          backgroundColor: c.bgElev,
+          borderWidth: 1,
+          borderColor: c.line,
+          borderRadius: 12,
+          paddingHorizontal: 14,
+          paddingVertical: 10,
+          marginBottom: 12,
+        }}>
+        <FringeIcon name="search" size={16} color={c.ink3} />
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search transactions"
+          placeholderTextColor={c.ink3}
+          style={{ flex: 1, fontSize: 14, color: c.ink1 }}
+        />
+      </View>
+
+      <View style={{ marginBottom: 14 }}>
+        <Segmented
+          options={[
+            { value: 'all', label: 'All' },
+            { value: 'income', label: 'Income' },
+            { value: 'expense', label: 'Expense' },
           ]}
-          onPress={() => setFilter('all')}>
-          <ThemedText style={[styles.filterText, { color: theme.text }, filter === 'all' && [styles.filterTextActive, { color: theme.tint }]]}>All</ThemedText>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            { borderColor: theme.border },
-            filter === 'income' && [styles.filterButtonActive, { backgroundColor: `${theme.tint}14`, borderColor: theme.tint }],
-          ]}
-          onPress={() => setFilter('income')}>
-          <ThemedText style={[styles.filterText, { color: theme.text }, filter === 'income' && [styles.filterTextActive, { color: theme.tint }]]}>Income</ThemedText>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            { borderColor: theme.border },
-            filter === 'expense' && [styles.filterButtonActive, { backgroundColor: `${theme.tint}14`, borderColor: theme.tint }],
-          ]}
-          onPress={() => setFilter('expense')}>
-          <ThemedText style={[styles.filterText, { color: theme.text }, filter === 'expense' && [styles.filterTextActive, { color: theme.tint }]]}>Expense</ThemedText>
-        </TouchableOpacity>
+          value={filter}
+          onChange={setFilter}
+          size="sm"
+          fullWidth
+        />
+      </View>
+
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+        <Card pad={12} radius="md" style={{ flex: 1 }}>
+          <Text style={{ fontSize: 11, color: c.ink3, fontWeight: '600', letterSpacing: 0.4 }}>IN</Text>
+          <Text
+            style={{
+              fontSize: 18,
+              fontWeight: '700',
+              color: c.positive,
+              marginTop: 2,
+              fontVariant: ['tabular-nums'],
+            }}>
+            +${Math.round(totalIn).toLocaleString()}
+          </Text>
+        </Card>
+        <Card pad={12} radius="md" style={{ flex: 1 }}>
+          <Text style={{ fontSize: 11, color: c.ink3, fontWeight: '600', letterSpacing: 0.4 }}>OUT</Text>
+          <Text
+            style={{
+              fontSize: 18,
+              fontWeight: '700',
+              color: c.ink1,
+              marginTop: 2,
+              fontVariant: ['tabular-nums'],
+            }}>
+            −${Math.round(totalOut).toLocaleString()}
+          </Text>
+        </Card>
       </View>
 
       {isLoading ? (
-        <ThemedView style={styles.loadingContainer}>
-          <ThemedText>Loading...</ThemedText>
-        </ThemedView>
-      ) : filteredTransactions.length === 0 ? (
-        <ThemedView style={styles.emptyState}>
-          <IconSymbol name="tray" size={64} color="#999" />
-          <ThemedText style={styles.emptyText}>No transactions found</ThemedText>
-          <TouchableOpacity
-            style={[styles.addButton, { backgroundColor: theme.primary }]}
-            onPress={() => router.push('/transactions/add')}>
-            <IconSymbol name="plus.circle.fill" size={20} color="#fff" />
-            <ThemedText style={styles.addButtonText}>Add Transaction</ThemedText>
-          </TouchableOpacity>
-        </ThemedView>
+        <Text style={{ marginTop: 24, color: c.ink3, textAlign: 'center' }}>Loading...</Text>
+      ) : groups.length === 0 ? (
+        <EmptyState icon="search" title="No transactions" body="Try a different search or filter." />
       ) : (
-        <FlatList
-          data={filteredTransactions}
-          renderItem={renderTransaction}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-        />
+        groups.map(([day, list]) => {
+          const dayTotal = list.reduce((s, t) => s + (t.type === 'income' ? t.amount : -t.amount), 0);
+          return (
+            <View key={day} style={{ marginBottom: 14 }}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'baseline',
+                  paddingHorizontal: 4,
+                  paddingBottom: 8,
+                }}>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: c.ink3, letterSpacing: 0.4 }}>
+                  {day.toUpperCase()}
+                </Text>
+                <Text style={{ fontSize: 12, color: c.ink3, fontVariant: ['tabular-nums'] }}>
+                  {dayTotal >= 0 ? '+' : '−'}${Math.abs(dayTotal).toFixed(0)}
+                </Text>
+              </View>
+              <Card pad={0} radius="lg" style={{ paddingHorizontal: 16, paddingVertical: 4 }}>
+                {list.map((item, i) => (
+                  <View
+                    key={item.id}
+                    style={{
+                      borderBottomWidth: i < list.length - 1 ? 1 : 0,
+                      borderBottomColor: c.line,
+                    }}>
+                    <FringeTransactionRow
+                      transaction={item}
+                      category={getCategory(item.categoryId)}
+                      onPress={() => router.push(`/transactions/${item.id}`)}
+                      compact
+                    />
+                  </View>
+                ))}
+              </Card>
+            </View>
+          );
+        })
       )}
-    </SafeAreaView>
+    </ScreenScroll>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-  },
-  filterContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: 8,
-    marginBottom: 8,
-  },
-  filterButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  filterButtonActive: {},
-  filterText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  filterTextActive: {
-    color: '#6D28D9',
-  },
-  listContent: {
-    padding: 16,
-    paddingBottom: 80,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-  },
-  emptyText: {
-    fontSize: 18,
-    opacity: 0.7,
-    marginTop: 16,
-    marginBottom: 24,
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 12,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
-

@@ -1,10 +1,8 @@
-import { useState } from 'react';
-import { StyleSheet, View, TouchableOpacity, Modal, Platform } from 'react-native';
-import { ThemedText } from './themed-text';
+import { formatDisplayDate, formatLocalIso, fmtMonthYear, parseLocalDate } from '@/lib/date-helpers';
+import { useTheme } from '@/theme/ThemeContext';
+import { useEffect, useMemo, useState } from 'react';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { IconSymbol } from './ui/icon-symbol';
-import { format } from 'date-fns';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
 
 interface DatePickerProps {
   value?: string;
@@ -14,137 +12,121 @@ interface DatePickerProps {
 }
 
 export function DatePicker({ value, onChange, placeholder = 'mm / dd / yyyy', borderColor }: DatePickerProps) {
-  const colorScheme = useColorScheme() ?? 'light';
-  const theme = Colors[colorScheme];
+  const { c } = useTheme();
   const [showPicker, setShowPicker] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date>(value ? new Date(value) : new Date());
+  const [viewDate, setViewDate] = useState(() => (value ? parseLocalDate(value) : new Date()));
 
-  const textColor = theme.text;
-  const finalBorderColor = borderColor || theme.border;
+  useEffect(() => {
+    if (value) setViewDate(parseLocalDate(value));
+  }, [value]);
 
-  const handleDateChange = (date: Date) => {
-    setSelectedDate(date);
-    onChange(format(date, 'yyyy-MM-dd'));
+  const todayIso = formatLocalIso(new Date());
+
+  const calendarDays = useMemo(() => {
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const startDate = new Date(year, month, 1 - firstDay.getDay());
+
+    return Array.from({ length: 42 }, (_, i) => {
+      const dayDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + i);
+      const iso = formatLocalIso(dayDate);
+      return {
+        iso,
+        day: dayDate.getDate(),
+        isCurrentMonth: dayDate.getMonth() === month,
+        isSelected: value === iso,
+        isToday: todayIso === iso,
+      };
+    });
+  }, [viewDate, value, todayIso]);
+
+  function openPicker() {
+    setViewDate(value ? parseLocalDate(value) : new Date());
+    setShowPicker(true);
+  }
+
+  function handleSelect(iso: string) {
+    onChange(iso);
     setShowPicker(false);
-  };
+  }
 
-  const displayValue = value ? format(new Date(value), 'MM / dd / yyyy') : placeholder;
+  function shiftMonth(delta: number) {
+    setViewDate((current) => new Date(current.getFullYear(), current.getMonth() + delta, 1));
+  }
+
+  const displayValue = value ? formatDisplayDate(value) : placeholder;
 
   return (
     <>
-      <TouchableOpacity
-        style={[styles.input, { borderColor: finalBorderColor }]}
-        onPress={() => setShowPicker(true)}>
-        <ThemedText style={[styles.inputText, { color: value ? textColor : '#999' }]}>
-          {displayValue}
-        </ThemedText>
-        <IconSymbol name="calendar" size={20} color="#999" />
-      </TouchableOpacity>
+      <Pressable
+        style={[styles.input, { borderColor: borderColor ?? c.line, backgroundColor: c.bgElev }]}
+        onPress={openPicker}>
+        <Text style={[styles.inputText, { color: value ? c.ink1 : c.ink3 }]}>{displayValue}</Text>
+        <IconSymbol name="calendar" size={20} color={c.ink3} />
+      </Pressable>
 
       <Modal visible={showPicker} transparent animationType="slide" onRequestClose={() => setShowPicker(false)}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
+          <View style={[styles.modalContent, { backgroundColor: c.bgElev }]}>
             <View style={styles.modalHeader}>
-              <ThemedText type="subtitle">Select Date</ThemedText>
-              <TouchableOpacity onPress={() => setShowPicker(false)}>
-                <IconSymbol name="xmark.circle.fill" size={24} color="#999" />
-              </TouchableOpacity>
+              <Text style={[styles.modalTitle, { color: c.ink1 }]}>Select Date</Text>
+              <Pressable onPress={() => setShowPicker(false)} hitSlop={12}>
+                <IconSymbol name="xmark.circle.fill" size={24} color={c.ink3} />
+              </Pressable>
             </View>
 
-            <View style={styles.calendarContainer}>
-              {/* Simple month/year selector */}
-              <View style={styles.monthYearSelector}>
-                <TouchableOpacity
-                  onPress={() => {
-                    const newDate = new Date(selectedDate);
-                    newDate.setMonth(newDate.getMonth() - 1);
-                    setSelectedDate(newDate);
-                  }}>
-                  <IconSymbol name="chevron.left" size={24} color={textColor} />
-                </TouchableOpacity>
-                <ThemedText style={styles.monthYearText}>
-                  {format(selectedDate, 'MMMM yyyy')}
-                </ThemedText>
-                <TouchableOpacity
-                  onPress={() => {
-                    const newDate = new Date(selectedDate);
-                    newDate.setMonth(newDate.getMonth() + 1);
-                    setSelectedDate(newDate);
-                  }}>
-                  <IconSymbol name="chevron.right" size={24} color={textColor} />
-                </TouchableOpacity>
-              </View>
+            <View style={styles.monthYearSelector}>
+              <Pressable onPress={() => shiftMonth(-1)} hitSlop={12}>
+                <IconSymbol name="chevron.left" size={24} color={c.ink1} />
+              </Pressable>
+              <Text style={[styles.monthYearText, { color: c.ink1 }]}>{fmtMonthYear(viewDate)}</Text>
+              <Pressable onPress={() => shiftMonth(1)} hitSlop={12}>
+                <IconSymbol name="chevron.right" size={24} color={c.ink1} />
+              </Pressable>
+            </View>
 
-              {/* Calendar grid */}
-              <View style={styles.calendarGrid}>
-                {/* Day headers */}
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                  <View key={day} style={styles.dayHeader}>
-                    <ThemedText style={styles.dayHeaderText}>{day}</ThemedText>
-                  </View>
-                ))}
+            <View style={styles.calendarGrid}>
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                <View key={day} style={styles.dayHeader}>
+                  <Text style={[styles.dayHeaderText, { color: c.ink2 }]}>{day}</Text>
+                </View>
+              ))}
 
-                {/* Calendar days */}
-                {(() => {
-                  const year = selectedDate.getFullYear();
-                  const month = selectedDate.getMonth();
-                  const firstDay = new Date(year, month, 1);
-                  const lastDay = new Date(year, month + 1, 0);
-                  const startDate = new Date(firstDay);
-                  startDate.setDate(startDate.getDate() - startDate.getDay());
-
-                  const days = [];
-                  const currentDate = new Date(startDate);
-
-                  for (let i = 0; i < 42; i++) {
-                    const isCurrentMonth = currentDate.getMonth() === month;
-                    const isSelected =
-                      value &&
-                      format(currentDate, 'yyyy-MM-dd') === format(new Date(value), 'yyyy-MM-dd');
-                    const isToday =
-                      format(currentDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
-
-                    days.push(
-                      <TouchableOpacity
-                        key={i}
-                        style={[
-                          styles.dayCell,
-                          isCurrentMonth && styles.dayCellCurrentMonth,
-                          isSelected && { backgroundColor: theme.primary },
-                          isToday && !isSelected && { borderWidth: 1, borderColor: theme.primary },
-                        ]}
-                        onPress={() => handleDateChange(new Date(currentDate))}>
-                        <ThemedText
-                          style={[
-                            styles.dayText,
-                            !isCurrentMonth && styles.dayTextOtherMonth,
-                            isSelected && styles.dayTextSelected,
-                            isToday && !isSelected && { color: theme.primary, fontWeight: '600' },
-                          ]}>
-                          {currentDate.getDate()}
-                        </ThemedText>
-                      </TouchableOpacity>
-                    );
-
-                    currentDate.setDate(currentDate.getDate() + 1);
-                  }
-
-                  return days;
-                })()}
-              </View>
+              {calendarDays.map(({ iso, day, isCurrentMonth, isSelected, isToday }) => (
+                <Pressable
+                  key={iso}
+                  style={[
+                    styles.dayCell,
+                    isSelected && { backgroundColor: c.accent },
+                    isToday && !isSelected && { borderWidth: 1, borderColor: c.accent },
+                  ]}
+                  onPress={() => handleSelect(iso)}>
+                  <Text
+                    style={[
+                      styles.dayText,
+                      { color: isCurrentMonth ? c.ink1 : c.ink3 },
+                      !isCurrentMonth && styles.dayTextOtherMonth,
+                      isSelected && styles.dayTextSelected,
+                      isToday && !isSelected && { color: c.accent, fontWeight: '600' },
+                    ]}>
+                    {day}
+                  </Text>
+                </Pressable>
+              ))}
             </View>
 
             <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: theme.border }]}
+              <Pressable
+                style={[styles.modalButton, { backgroundColor: c.bgSubtle }]}
                 onPress={() => setShowPicker(false)}>
-                <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: theme.primary }]}
-                onPress={() => handleDateChange(selectedDate)}>
-                <ThemedText style={styles.confirmButtonText}>Confirm</ThemedText>
-              </TouchableOpacity>
+                <Text style={[styles.cancelButtonText, { color: c.ink2 }]}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.modalButton, { backgroundColor: c.accent }]}
+                onPress={() => handleSelect(value ?? todayIso)}>
+                <Text style={styles.confirmButtonText}>Confirm</Text>
+              </Pressable>
             </View>
           </View>
         </View>
@@ -159,9 +141,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 12,
-    fontSize: 16,
   },
   inputText: {
     fontSize: 16,
@@ -184,8 +165,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  calendarContainer: {
-    marginBottom: 20,
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
   },
   monthYearSelector: {
     flexDirection: 'row',
@@ -200,6 +182,7 @@ const styles = StyleSheet.create({
   calendarGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    marginBottom: 20,
   },
   dayHeader: {
     width: '14.28%',
@@ -209,7 +192,6 @@ const styles = StyleSheet.create({
   dayHeaderText: {
     fontSize: 12,
     fontWeight: '600',
-    opacity: 0.7,
   },
   dayCell: {
     width: '14.28%',
@@ -219,14 +201,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginVertical: 2,
   },
-  dayCellCurrentMonth: {
-    // Default styling
-  },
   dayText: {
     fontSize: 14,
   },
   dayTextOtherMonth: {
-    opacity: 0.3,
+    opacity: 0.45,
   },
   dayTextSelected: {
     color: '#fff',
@@ -239,7 +218,7 @@ const styles = StyleSheet.create({
   modalButton: {
     flex: 1,
     padding: 14,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
   },
   cancelButtonText: {
@@ -252,4 +231,3 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 });
-

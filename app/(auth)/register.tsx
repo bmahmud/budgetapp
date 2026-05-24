@@ -1,9 +1,10 @@
-import { ThemedText } from '@/components/themed-text';
-import { Colors, FringePalette } from '@/constants/theme';
+import { Card } from '@/components/fringe/card';
+import { FringeInput } from '@/components/fringe/form';
+import { ScreenScroll } from '@/components/fringe/screen-scroll';
 import { useAuth } from '@/contexts/auth-context';
 import { validatePassword } from '@/lib/password-validation';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/theme/ThemeContext';
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -11,18 +12,17 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
+  Pressable,
+  Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function RegisterScreen() {
   const router = useRouter();
   const { signUp } = useAuth();
-  const colorScheme = useColorScheme() ?? 'light';
-  const theme = Colors[colorScheme];
+  const { c, sh } = useTheme();
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -58,111 +58,38 @@ export default function RegisterScreen() {
     }
     Alert.alert(
       'Check your email',
-      'If email confirmation is enabled in Supabase, confirm your address before signing in. You can sign in now if confirmation is disabled.',
+      'If email confirmation is enabled in Supabase, confirm your address before signing in.',
       [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }],
     );
   }
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.flex}>
-        <View style={styles.inner}>
-          <ThemedText type="title" style={styles.title}>
-            Create account
-          </ThemedText>
-          <ThemedText style={[styles.subtitle, { color: theme.mutedText }]}>Create your Fringe account.</ThemedText>
-
-          <TextInput
-            style={[
-              styles.input,
-              { color: theme.text, borderColor: theme.border, backgroundColor: theme.card },
-            ]}
-            placeholder="Email"
-            placeholderTextColor={theme.mutedText}
-            autoCapitalize="none"
-            autoCorrect={false}
-            autoComplete="off"
-            keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
-          />
-          <TextInput
-            style={[
-              styles.input,
-              { color: theme.text, borderColor: theme.border, backgroundColor: theme.card },
-            ]}
-            placeholder="Password (min 6, 1 uppercase, 1 special)"
-            placeholderTextColor={theme.mutedText}
-            secureTextEntry
-            autoComplete="off"
-            textContentType="none"
-            value={password}
-            onChangeText={setPassword}
-          />
-          <TextInput
-            style={[
-              styles.input,
-              { color: theme.text, borderColor: theme.border, backgroundColor: theme.card },
-            ]}
-            placeholder="Confirm password"
-            placeholderTextColor={theme.mutedText}
-            secureTextEntry
-            autoComplete="off"
-            textContentType="none"
-            value={confirm}
-            onChangeText={setConfirm}
-          />
-
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: theme.primary }]}
-            onPress={handleRegister}
-            disabled={submitting}
-            activeOpacity={0.85}>
-            {submitting ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <ThemedText style={styles.buttonText}>Sign up</ThemedText>
-            )}
-          </TouchableOpacity>
-
+    <SafeAreaView style={{ flex: 1, backgroundColor: c.bgBase }} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: insets.top + 24, paddingBottom: 24 }}>
+          <Text style={{ fontSize: 30, fontWeight: '800', color: c.ink1, marginBottom: 8 }}>Create account</Text>
+          <Text style={{ fontSize: 15, color: c.ink2, marginBottom: 24 }}>Create your Fringe account.</Text>
+          <View style={{ gap: 10 }}>
+            <FringeInput value={email} onChange={setEmail} placeholder="Email" autoCapitalize="none" keyboardType="email-address" />
+            <FringeInput value={password} onChange={setPassword} placeholder="Password (min 6, 1 uppercase, 1 special)" secureTextEntry autoComplete="off" textContentType="none" />
+            <FringeInput value={confirm} onChange={setConfirm} placeholder="Confirm password" secureTextEntry autoComplete="off" textContentType="none" />
+            <Pressable
+              onPress={() => void handleRegister()}
+              disabled={submitting}
+              style={({ pressed }) => [
+                { paddingVertical: 15, backgroundColor: c.accent, borderRadius: 14, alignItems: 'center', marginTop: 8, ...sh.fab },
+                pressed && { transform: [{ scale: 0.985 }] },
+              ]}>
+              {submitting ? <ActivityIndicator color={c.accentOn} /> : <Text style={{ color: c.accentOn, fontWeight: '600' }}>Sign up</Text>}
+            </Pressable>
+          </View>
           <Link href="/(auth)/login" asChild>
-            <TouchableOpacity style={styles.linkWrap}>
-              <ThemedText style={{ color: FringePalette.purple }}>Already have an account? Sign in</ThemedText>
-            </TouchableOpacity>
+            <Pressable style={{ marginTop: 24, alignItems: 'center' }}>
+              <Text style={{ color: c.accent }}>Already have an account? Sign in</Text>
+            </Pressable>
           </Link>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safe: { flex: 1 },
-  flex: { flex: 1 },
-  inner: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 48,
-    justifyContent: 'center',
-  },
-  title: { marginBottom: 8 },
-  subtitle: { marginBottom: 32, fontSize: 15 },
-  input: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    marginBottom: 12,
-  },
-  button: {
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  linkWrap: { marginTop: 24, alignItems: 'center' },
-});
