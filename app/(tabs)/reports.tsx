@@ -5,6 +5,7 @@ import { Donut } from '@/components/fringe/donut';
 import { ProgressBar } from '@/components/fringe/progress-bar';
 import { ScreenScroll } from '@/components/fringe/screen-scroll';
 import { Segmented } from '@/components/fringe/segmented';
+import { buildLast6MonthsChart } from '@/lib/home-rollup';
 import { useTheme } from '@/theme/ThemeContext';
 import { useBudgetStore } from '@/store/budget-store';
 import { useEffect, useMemo, useState } from 'react';
@@ -14,7 +15,8 @@ type Range = 'week' | 'month' | 'year';
 
 export default function ReportsScreen() {
   const { c } = useTheme();
-  const { getSummaryMetrics, getCategorySummaries, categories, isInitialized, initialize } = useBudgetStore();
+  const { transactions, getSummaryMetrics, getCategorySummaries, categories, isInitialized, initialize } =
+    useBudgetStore();
   const [range, setRange] = useState<Range>('month');
 
   useEffect(() => {
@@ -29,19 +31,18 @@ export default function ReportsScreen() {
   const balance = metrics.netBalance;
   const savingsRate = income > 0 ? (balance / income) * 100 : 0;
 
-  const monthsData = useMemo<BarDatum[]>(() => {
-    const labels = ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'];
-    return labels.map((label, i) => {
-      const base = 6500 + Math.sin(i) * 600;
-      const monthIncome = i === 5 ? income : base + 200;
-      const monthExpense = i === 5 ? expenses : base * 0.6 + 300;
-      return { label, income: monthIncome, expense: monthExpense };
-    });
-  }, [income, expenses]);
+  const monthsData = useMemo<BarDatum[]>(() => buildLast6MonthsChart(transactions), [transactions]);
+
+  const hasChartData = useMemo(
+    () => monthsData.some((m) => m.income > 0 || m.expense > 0),
+    [monthsData],
+  );
+
+  const hasExpenseData = expenseSummaries.some((s) => s.totalAmount > 0);
 
   const segments = useMemo(() => {
     return expenseSummaries.slice(0, 7).map((s) => {
-      const cat = categories.find((c) => c.id === s.categoryId);
+      const cat = categories.find((cat) => cat.id === s.categoryId);
       return {
         color: cat?.color ?? c.accent,
         value: s.totalAmount,
@@ -72,9 +73,14 @@ export default function ReportsScreen() {
       </View>
 
       <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
-        <ReportStat label="Income" value={income} color={c.positive} delta="+12%" />
-        <ReportStat label="Expenses" value={expenses} color={c.negative} delta="+4%" />
-        <ReportStat label="Saved" value={balance} color={c.accent} delta={`${savingsRate.toFixed(0)}%`} />
+        <ReportStat label="Income" value={income} color={c.positive} delta={income > 0 ? '+12%' : undefined} />
+        <ReportStat label="Expenses" value={expenses} color={c.negative} delta={expenses > 0 ? '+4%' : undefined} />
+        <ReportStat
+          label="Saved"
+          value={balance}
+          color={c.accent}
+          delta={income > 0 ? `${savingsRate.toFixed(0)}%` : undefined}
+        />
       </View>
 
       <Card pad={18} radius="lg" style={{ marginBottom: 14 }}>
@@ -89,19 +95,30 @@ export default function ReportsScreen() {
             <Text style={{ fontSize: 16, fontWeight: '700', color: c.ink1 }}>Income vs Expenses</Text>
             <Text style={{ fontSize: 12, color: c.ink3, marginTop: 2 }}>Last 6 months</Text>
           </View>
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <Text style={{ fontSize: 11, color: c.ink2 }}>
-              <Text style={{ color: c.positive, fontWeight: '700' }}>■</Text> In
-            </Text>
-            <Text style={{ fontSize: 11, color: c.ink2 }}>
-              <Text style={{ color: c.negative, fontWeight: '700' }}>■</Text> Out
+          {hasChartData ? (
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <Text style={{ fontSize: 11, color: c.ink2 }}>
+                <Text style={{ color: c.positive, fontWeight: '700' }}>■</Text> In
+              </Text>
+              <Text style={{ fontSize: 11, color: c.ink2 }}>
+                <Text style={{ color: c.negative, fontWeight: '700' }}>■</Text> Out
+              </Text>
+            </View>
+          ) : null}
+        </View>
+        {hasChartData ? (
+          <BarChart data={monthsData} height={130} />
+        ) : (
+          <View style={{ paddingVertical: 32, alignItems: 'center' }}>
+            <Text style={{ fontSize: 15, fontWeight: '600', color: c.ink1 }}>No data yet</Text>
+            <Text style={{ fontSize: 13, color: c.ink3, marginTop: 6, textAlign: 'center' }}>
+              Add transactions to see income and expenses over time.
             </Text>
           </View>
-        </View>
-        <BarChart data={monthsData} height={130} />
+        )}
       </Card>
 
-      {segments.length > 0 ? (
+      {hasExpenseData ? (
         <>
           <Card pad={18} radius="lg" style={{ marginBottom: 14 }}>
             <Text style={{ fontSize: 16, fontWeight: '700', color: c.ink1, marginBottom: 14 }}>
@@ -194,14 +211,7 @@ export default function ReportsScreen() {
             })}
           </Card>
         </>
-      ) : (
-        <Card pad={24} radius="lg" style={{ alignItems: 'center' }}>
-          <Text style={{ fontSize: 15, fontWeight: '600', color: c.ink1 }}>No spending data yet</Text>
-          <Text style={{ fontSize: 13, color: c.ink3, marginTop: 6, textAlign: 'center' }}>
-            Add transactions to see your reports.
-          </Text>
-        </Card>
-      )}
+      ) : null}
     </ScreenScroll>
   );
 }
@@ -215,7 +225,7 @@ function ReportStat({
   label: string;
   value: number;
   color: string;
-  delta: string;
+  delta?: string;
 }) {
   const { c } = useTheme();
   return (
@@ -232,7 +242,9 @@ function ReportStat({
         }}>
         ${value >= 1000 ? `${(value / 1000).toFixed(1)}k` : Math.round(value).toLocaleString()}
       </Text>
-      <Text style={{ fontSize: 10, color, fontWeight: '600', marginTop: 4 }}>{delta}</Text>
+      {delta ? (
+        <Text style={{ fontSize: 10, color, fontWeight: '600', marginTop: 4 }}>{delta}</Text>
+      ) : null}
     </Card>
   );
 }
