@@ -1,6 +1,6 @@
 import { CategoryIcon } from '@/components/fringe/category-icon';
 import { FringeIcon } from '@/components/fringe/icon';
-import { relativeDay } from '@/lib/date-helpers';
+import { formatDisplayDate, relativeDay } from '@/lib/date-helpers';
 import { useTheme } from '@/theme/ThemeContext';
 import type { Category, Transaction } from '@/types';
 import React from 'react';
@@ -11,13 +11,28 @@ type Props = {
   category?: Category;
   onPress?: () => void;
   compact?: boolean;
+  dateMode?: 'relative' | 'exact' | 'both';
 };
 
-export function FringeTransactionRow({ transaction, category, onPress, compact = false }: Props) {
+export function FringeTransactionRow({
+  transaction,
+  category,
+  onPress,
+  compact = false,
+  dateMode = 'relative',
+}: Props) {
   const { c } = useTheme();
   const isIncome = transaction.type === 'income';
   const label = category?.name ?? 'Unknown';
   const title = transaction.notes?.trim() || label;
+  const relativeLabel = relativeDay(transaction.date);
+  const exactLabel = formatDisplayDate(transaction.date);
+  const dateLabel =
+    dateMode === 'exact'
+      ? exactLabel
+      : dateMode === 'both'
+        ? `${relativeLabel} · ${exactLabel}`
+        : relativeLabel;
 
   return (
     <Pressable
@@ -48,7 +63,7 @@ export function FringeTransactionRow({ transaction, category, onPress, compact =
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
           <Text style={{ fontSize: 12, color: c.ink3 }}>{label}</Text>
           <Text style={{ fontSize: 12, color: c.ink3, opacity: 0.5 }}>·</Text>
-          <Text style={{ fontSize: 12, color: c.ink3 }}>{relativeDay(transaction.date)}</Text>
+          <Text style={{ fontSize: 12, color: c.ink3 }}>{dateLabel}</Text>
           {transaction.isRecurring ? (
             <>
               <Text style={{ fontSize: 12, color: c.ink3, opacity: 0.5 }}>·</Text>

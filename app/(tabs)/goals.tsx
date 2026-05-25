@@ -1,5 +1,6 @@
 import { Card } from '@/components/fringe/card';
 import { FringeIcon } from '@/components/fringe/icon';
+import { HeaderLogo } from '@/components/fringe/header-logo';
 import { ProgressBar } from '@/components/fringe/progress-bar';
 import { ScreenScroll } from '@/components/fringe/screen-scroll';
 import { SectionHeader } from '@/components/fringe/section-header';
@@ -127,21 +128,24 @@ export default function GoalsScreen() {
           <Text style={{ fontSize: 12, color: c.ink3, fontWeight: '600', letterSpacing: 0.4 }}>FUTURE</Text>
           <Text style={{ fontSize: 26, fontWeight: '700', color: c.ink1, letterSpacing: -0.6 }}>Goals</Text>
         </View>
-        <Pressable
-          onPress={() => setShowModal(true)}
-          style={{
-            backgroundColor: c.ink1,
-            paddingHorizontal: 16,
-            paddingVertical: 10,
-            paddingLeft: 12,
-            borderRadius: 999,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 4,
-          }}>
-          <FringeIcon name="plus" size={16} color={c.bgElev} strokeWidth={2.4} />
-          <Text style={{ fontSize: 13, fontWeight: '600', color: c.bgElev }}>New goal</Text>
-        </Pressable>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <HeaderLogo />
+          <Pressable
+            onPress={() => setShowModal(true)}
+            style={{
+              backgroundColor: c.ink1,
+              paddingHorizontal: 16,
+              paddingVertical: 10,
+              paddingLeft: 12,
+              borderRadius: 999,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+            }}>
+            <FringeIcon name="plus" size={16} color={c.bgElev} strokeWidth={2.4} />
+            <Text style={{ fontSize: 13, fontWeight: '600', color: c.bgElev }}>New goal</Text>
+          </Pressable>
+        </View>
       </View>
 
       {goals.length > 0 ? (

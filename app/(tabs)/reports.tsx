@@ -2,6 +2,7 @@ import { BarChart, type BarDatum } from '@/components/fringe/bar-chart';
 import { Card } from '@/components/fringe/card';
 import { CategoryIcon } from '@/components/fringe/category-icon';
 import { Donut } from '@/components/fringe/donut';
+import { HeaderLogo } from '@/components/fringe/header-logo';
 import { ProgressBar } from '@/components/fringe/progress-bar';
 import { ScreenScroll } from '@/components/fringe/screen-scroll';
 import { Segmented } from '@/components/fringe/segmented';
@@ -54,9 +55,18 @@ export default function ReportsScreen() {
 
   return (
     <ScreenScroll>
-      <View style={{ paddingBottom: 18 }}>
-        <Text style={{ fontSize: 12, color: c.ink3, fontWeight: '600', letterSpacing: 0.4 }}>INSIGHTS</Text>
-        <Text style={{ fontSize: 26, fontWeight: '700', color: c.ink1, letterSpacing: -0.6 }}>Reports</Text>
+      <View
+        style={{
+          paddingBottom: 18,
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+        }}>
+        <View>
+          <Text style={{ fontSize: 12, color: c.ink3, fontWeight: '600', letterSpacing: 0.4 }}>INSIGHTS</Text>
+          <Text style={{ fontSize: 26, fontWeight: '700', color: c.ink1, letterSpacing: -0.6 }}>Reports</Text>
+        </View>
+        <HeaderLogo />
       </View>
 
       <View style={{ marginBottom: 16 }}>

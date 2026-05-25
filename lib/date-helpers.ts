@@ -36,6 +36,12 @@ export function relativeDay(iso: string): string {
   today.setHours(0, 0, 0, 0);
   const diff = Math.round((today.getTime() - dt.getTime()) / 86400000);
   if (diff === 0) return 'Today';
+  if (diff === -1) return 'Tomorrow';
+  if (diff < 0) {
+    const daysUntil = Math.abs(diff);
+    if (daysUntil < 7) return `In ${daysUntil} day${daysUntil === 1 ? '' : 's'}`;
+    return fmtDate(iso);
+  }
   if (diff === 1) return 'Yesterday';
   if (diff < 7) return `${diff} days ago`;
   return fmtDate(iso);

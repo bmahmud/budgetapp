@@ -1,5 +1,6 @@
 import { Card } from '@/components/fringe/card';
 import { EmptyState } from '@/components/fringe/empty-state';
+import { HeaderLogo } from '@/components/fringe/header-logo';
 import { FringeIcon } from '@/components/fringe/icon';
 import { IconButton } from '@/components/fringe/icon-button';
 import { ScreenScroll } from '@/components/fringe/screen-scroll';
@@ -67,7 +68,10 @@ export default function TransactionsScreen() {
           <Text style={{ fontSize: 12, color: c.ink3, fontWeight: '600', letterSpacing: 0.4 }}>ACTIVITY</Text>
           <Text style={{ fontSize: 26, fontWeight: '700', color: c.ink1, letterSpacing: -0.6 }}>All transactions</Text>
         </View>
-        <IconButton icon="filter" size={40} tone="elev" />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <HeaderLogo />
+          <IconButton icon="filter" size={40} tone="elev" />
+        </View>
       </View>
 
       <View
@@ -173,6 +177,7 @@ export default function TransactionsScreen() {
                       category={getCategory(item.categoryId)}
                       onPress={() => router.push(`/transactions/${item.id}`)}
                       compact
+                      dateMode="exact"
                     />
                   </View>
                 ))}

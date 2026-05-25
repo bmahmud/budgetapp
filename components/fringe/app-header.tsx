@@ -1,3 +1,4 @@
+import { HeaderLogo } from '@/components/fringe/header-logo';
 import { useTheme } from '@/theme/ThemeContext';
 import React from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
@@ -37,25 +38,28 @@ export function AppHeader({ name = 'there', avatarUri, initials = 'U', onProfile
           {name}
         </Text>
       </View>
-      <Pressable
-        onPress={onProfile}
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: 20,
-          overflow: 'hidden',
-          backgroundColor: c.accent,
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderWidth: 2,
-          borderColor: c.bgElev,
-        }}>
-        {avatarUri ? (
-          <Image source={{ uri: avatarUri }} style={{ width: '100%', height: '100%' }} />
-        ) : (
-          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>{displayInitials}</Text>
-        )}
-      </Pressable>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <HeaderLogo />
+        <Pressable
+          onPress={onProfile}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            overflow: 'hidden',
+            backgroundColor: c.accent,
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderWidth: 2,
+            borderColor: c.bgElev,
+          }}>
+          {avatarUri ? (
+            <Image source={{ uri: avatarUri }} style={{ width: '100%', height: '100%' }} />
+          ) : (
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>{displayInitials}</Text>
+          )}
+        </Pressable>
+      </View>
     </View>
   );
 }

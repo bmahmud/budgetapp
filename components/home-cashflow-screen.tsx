@@ -70,24 +70,17 @@ export function HomeCashflowScreen() {
   const expenses = monthTxs.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
 
   const expenseSummaries = useMemo(() => getCategorySummaries('month', 'expense'), [getCategorySummaries, transactions]);
-  const totalBudget = useMemo(() => {
-    if (income > 0) return Math.round(income * 0.66);
-    if (expenses > 0) return Math.round(expenses * 1.17);
-    return 0;
-  }, [income, expenses]);
-
   const hasBudgetData = income > 0 || expenses > 0;
 
-  const spentBudgeted = expenses;
-  const remaining = Math.max(0, totalBudget - spentBudgeted);
-  const pct = totalBudget ? (spentBudgeted / totalBudget) * 100 : 0;
+  const safeToSpend = Math.max(0, income - expenses);
+  const overspent = Math.max(0, expenses - income);
+  const pct = income > 0 ? (safeToSpend / income) * 100 : 0;
 
   const today = new Date();
   const daysIntoMonth = today.getDate();
   const daysInMonth = endOfMonth(today).getDate();
   const daysLeft = daysInMonth - daysIntoMonth;
-  const projected = daysIntoMonth > 0 ? (spentBudgeted / daysIntoMonth) * daysInMonth : spentBudgeted;
-  const onTrack = projected <= totalBudget;
+  const projected = daysIntoMonth > 0 ? (expenses / daysIntoMonth) * daysInMonth : expenses;
 
   const budgetRows = useMemo(() => {
     return expenseSummaries.slice(0, 4).map((summary) => {
@@ -133,20 +126,20 @@ export function HomeCashflowScreen() {
                 marginTop: 4,
                 fontVariant: ['tabular-nums'],
               }}>
-              ${remaining.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+              ${safeToSpend.toLocaleString('en-US', { maximumFractionDigits: 0 })}
             </Text>
             <Text style={{ fontSize: 12, color: c.ink3, marginTop: 6 }}>
               {hasBudgetData ? (
                 <>
-                  of <Text style={{ color: c.ink2, fontWeight: '600' }}>${totalBudget.toLocaleString()}</Text> budget ·{' '}
+                  from <Text style={{ color: c.ink2, fontWeight: '600' }}>${income.toLocaleString()}</Text> income ·{' '}
                   {daysLeft} days left
                 </>
               ) : (
-                'Add transactions to start tracking your budget'
+                'Add income and expenses to see your monthly net'
               )}
             </Text>
           </View>
-          <RingProgress pct={pct} size={68} thickness={6} color={onTrack ? c.accent : c.negative}>
+          <RingProgress pct={pct} size={68} thickness={6} color={safeToSpend > 0 ? c.accent : c.negative}>
             <Text style={{ fontSize: 14, fontWeight: '700', color: c.ink1 }}>{Math.round(pct)}%</Text>
           </RingProgress>
         </View>
@@ -166,23 +159,25 @@ export function HomeCashflowScreen() {
               width: 28,
               height: 28,
               borderRadius: 14,
-              backgroundColor: onTrack ? c.positiveSoft : c.negativeSoft,
+              backgroundColor: overspent > 0 ? c.negativeSoft : c.positiveSoft,
               alignItems: 'center',
               justifyContent: 'center',
             }}>
             <FringeIcon
-              name={onTrack ? 'trending' : 'arrowUp'}
+              name={overspent > 0 ? 'arrowUp' : 'trending'}
               size={14}
-              color={onTrack ? c.positive : c.negative}
+              color={overspent > 0 ? c.negative : c.positive}
               strokeWidth={2.4}
             />
           </View>
           <Text style={{ flex: 1, fontSize: 12.5, color: c.ink2, lineHeight: 18 }}>
             {!hasBudgetData
-              ? 'Add income and expenses to see your monthly projection.'
-              : onTrack
-                ? `You're projected to finish at $${Math.round(projected).toLocaleString()} — under budget.`
-                : `At this pace you'll spend $${Math.round(projected).toLocaleString()} this month.`}
+              ? 'Add income and expenses to see your monthly net.'
+              : income <= 0
+                ? `You've spent $${expenses.toLocaleString()} this month with no income recorded yet.`
+                : overspent > 0
+                  ? `You've spent $${expenses.toLocaleString()} so far, which is $${overspent.toLocaleString()} over this month's income.`
+                  : `You've spent $${expenses.toLocaleString()} so far. At this pace you'll spend about $${Math.round(projected).toLocaleString()} this month.`}
           </Text>
         </View>
       </Card>
