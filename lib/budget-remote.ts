@@ -47,7 +47,7 @@ function mapTransaction(row: {
     notes: row.notes ?? undefined,
     type: row.type as 'income' | 'expense',
     isRecurring: row.is_recurring,
-    recurringFrequency: (row.recurring_frequency as 'monthly' | undefined) ?? undefined,
+    recurringFrequency: (row.recurring_frequency as Transaction['recurringFrequency']) ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

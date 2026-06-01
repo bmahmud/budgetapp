@@ -8,6 +8,7 @@ import { SectionHeader } from '@/components/fringe/section-header';
 import { FringeTransactionRow } from '@/components/fringe/transaction-row';
 import { useAuth } from '@/contexts/auth-context';
 import { filterTransactionsByPeriod } from '@/lib/home-rollup';
+import { formatSafeToSpendInsight } from '@/lib/spending-insight';
 import { getProfilePreferences } from '@/lib/profile-preferences';
 import { resolveProfileAvatarUrl } from '@/lib/profile-avatar-storage';
 import { supabase } from '@/lib/supabase';
@@ -80,7 +81,13 @@ export function HomeCashflowScreen() {
   const daysIntoMonth = today.getDate();
   const daysInMonth = endOfMonth(today).getDate();
   const daysLeft = daysInMonth - daysIntoMonth;
-  const projected = daysIntoMonth > 0 ? (expenses / daysIntoMonth) * daysInMonth : expenses;
+  const spendInsight = formatSafeToSpendInsight({
+    expenses,
+    income,
+    daysIntoMonth,
+    daysInMonth,
+    hasBudgetData,
+  });
 
   const budgetRows = useMemo(() => {
     return expenseSummaries.slice(0, 4).map((summary) => {
@@ -171,13 +178,7 @@ export function HomeCashflowScreen() {
             />
           </View>
           <Text style={{ flex: 1, fontSize: 12.5, color: c.ink2, lineHeight: 18 }}>
-            {!hasBudgetData
-              ? 'Add income and expenses to see your monthly net.'
-              : income <= 0
-                ? `You've spent $${expenses.toLocaleString()} this month with no income recorded yet.`
-                : overspent > 0
-                  ? `You've spent $${expenses.toLocaleString()} so far, which is $${overspent.toLocaleString()} over this month's income.`
-                  : `You've spent $${expenses.toLocaleString()} so far. At this pace you'll spend about $${Math.round(projected).toLocaleString()} this month.`}
+            {spendInsight}
           </Text>
         </View>
       </Card>

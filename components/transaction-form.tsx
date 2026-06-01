@@ -5,7 +5,8 @@ import { FringeInput, Label, Toggle } from '@/components/fringe/form';
 import { Segmented } from '@/components/fringe/segmented';
 import { DatePicker } from '@/components/date-picker';
 import { useTheme } from '@/theme/ThemeContext';
-import { Category, Transaction } from '@/types';
+import { recurringFrequencyHint } from '@/lib/recurring';
+import { Category, RecurringFrequency, Transaction } from '@/types';
 import { format } from 'date-fns';
 import { useState } from 'react';
 import { Alert, Pressable, Text, TextInput, View } from 'react-native';
@@ -35,6 +36,9 @@ export function TransactionForm({
   const [notes, setNotes] = useState('');
   const [type, setType] = useState<'income' | 'expense'>(initialData?.type || 'expense');
   const [isRecurring, setIsRecurring] = useState(initialData?.isRecurring || false);
+  const [recurringFrequency, setRecurringFrequency] = useState<RecurringFrequency>(
+    initialData?.recurringFrequency || 'monthly',
+  );
 
   const filteredCategories = categories.filter((cat) => {
     if (type === 'income') return /salary|income|pay/i.test(cat.name);
@@ -68,7 +72,7 @@ export function TransactionForm({
       notes: (description.trim() || notes.trim()) || undefined,
       type,
       isRecurring,
-      recurringFrequency: isRecurring ? 'monthly' : undefined,
+      recurringFrequency: isRecurring ? recurringFrequency : undefined,
     });
   };
 
@@ -195,7 +199,7 @@ export function TransactionForm({
         })}
       </View>
 
-      <Card tone="subtle" pad={14} radius="md" style={{ marginBottom: 18 }}>
+      <Card tone="subtle" pad={14} radius="md" style={{ marginBottom: isRecurring ? 12 : 18 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <View
@@ -209,14 +213,30 @@ export function TransactionForm({
               }}>
               <FringeIcon name="refresh" size={16} color={c.accent} strokeWidth={2.2} />
             </View>
-            <View>
+            <View style={{ flex: 1, paddingRight: 8 }}>
               <Text style={{ fontSize: 14, fontWeight: '600', color: c.ink1 }}>Recurring</Text>
-              <Text style={{ fontSize: 12, color: c.ink3 }}>Repeats monthly</Text>
+              <Text style={{ fontSize: 12, color: c.ink3 }}>
+                {isRecurring ? recurringFrequencyHint(recurringFrequency, type) : 'Mark regular income or bills'}
+              </Text>
             </View>
           </View>
           <Toggle checked={isRecurring} onChange={setIsRecurring} />
         </View>
       </Card>
+
+      {isRecurring ? (
+        <View style={{ marginBottom: 18 }}>
+          <Label>Frequency</Label>
+          <Segmented
+            options={[
+              { value: 'monthly', label: 'Monthly' },
+              { value: 'biweekly', label: 'Biweekly' },
+            ]}
+            value={recurringFrequency}
+            onChange={(v) => setRecurringFrequency(v as RecurringFrequency)}
+          />
+        </View>
+      ) : null}
 
       <Pressable
         onPress={() => void handleSubmit()}

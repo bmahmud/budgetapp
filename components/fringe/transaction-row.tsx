@@ -1,6 +1,7 @@
 import { CategoryIcon } from '@/components/fringe/category-icon';
 import { FringeIcon } from '@/components/fringe/icon';
 import { formatDisplayDate, relativeDay } from '@/lib/date-helpers';
+import { recurringFrequencyLabel } from '@/lib/recurring';
 import { useTheme } from '@/theme/ThemeContext';
 import type { Category, Transaction } from '@/types';
 import React from 'react';
@@ -67,7 +68,9 @@ export function FringeTransactionRow({
           {transaction.isRecurring ? (
             <>
               <Text style={{ fontSize: 12, color: c.ink3, opacity: 0.5 }}>·</Text>
-              <FringeIcon name="refresh" size={11} color={c.ink3} strokeWidth={2} />
+              <Text style={{ fontSize: 12, color: c.ink3 }}>
+                {recurringFrequencyLabel(transaction.recurringFrequency)}
+              </Text>
             </>
           ) : null}
         </View>

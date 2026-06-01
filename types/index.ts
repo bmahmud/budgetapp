@@ -1,3 +1,5 @@
+export type RecurringFrequency = 'monthly' | 'biweekly';
+
 export interface Transaction {
   id: string;
   amount: number;
@@ -6,7 +8,7 @@ export interface Transaction {
   notes?: string;
   type: 'income' | 'expense';
   isRecurring: boolean;
-  recurringFrequency?: 'monthly';
+  recurringFrequency?: RecurringFrequency;
   createdAt: string;
   updatedAt: string;
 }
