@@ -68,8 +68,8 @@ export default function LoginScreen() {
             justifyContent: 'center',
           }}
           keyboardShouldPersistTaps="handled">
-          <View style={{ alignItems: 'center', marginBottom: 36 }}>
-            <Logo size={64} tagline withWordmark={false} />
+          <View style={{ alignItems: 'center', marginBottom: 32 }}>
+            <Logo size={64} withWordmark tagline stacked />
             <Text
               style={{
                 fontSize: 32,
